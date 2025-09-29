@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use the custom function we created in the database
+    // Use the enhanced search function with multiple strategies
     const { data, error } = await supabase.rpc('search_subject_lines', {
       query: query
     });
@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log(`Search for "${query}" returned ${data?.length || 0} results`);
 
     // Add grade to each result
     const results = data?.map((item: {
