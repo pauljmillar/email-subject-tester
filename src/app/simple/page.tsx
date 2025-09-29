@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function SimplePage() {
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
@@ -23,12 +25,12 @@ export default function SimplePage() {
           </div>
           
           <div className="mt-6">
-            <a 
+            <Link 
               href="/" 
               className="inline-block px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               Try Main App
-            </a>
+            </Link>
           </div>
         </div>
       </div>

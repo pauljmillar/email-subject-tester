@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function TestPage() {
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center">
@@ -8,12 +10,12 @@ export default function TestPage() {
         <p className="text-gray-300 text-lg">
           If you can see this page, your Vercel deployment is working correctly.
         </p>
-        <a 
+        <Link 
           href="/" 
           className="inline-block mt-6 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Go to Main App
-        </a>
+        </Link>
       </div>
     </div>
   );
