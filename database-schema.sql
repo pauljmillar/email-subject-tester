@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS subject_lines (
 -- Create an index for faster text search
 CREATE INDEX IF NOT EXISTS idx_subject_line_text ON subject_lines USING gin(to_tsvector('english', subject_line));
 
--- Enhanced search function with multiple strategies
+-- Simplified but effective search function
 CREATE OR REPLACE FUNCTION search_subject_lines(query TEXT)
 RETURNS TABLE (
   subject_line TEXT,
@@ -18,27 +18,12 @@ RETURNS TABLE (
   score REAL
 ) AS $$
 DECLARE
-  stemmed_query TEXT;
-  word_variants TEXT[];
-  word TEXT;
+  singular_query TEXT;
+  plural_query TEXT;
 BEGIN
-  -- Create word variants for better matching
-  stemmed_query := lower(trim(query));
-  
-  -- Extract individual words and create variants
-  SELECT array_agg(DISTINCT word) INTO word_variants
-  FROM (
-    SELECT unnest(string_to_array(stemmed_query, ' ')) as word
-    UNION
-    -- Add singular forms (remove 's' from end)
-    SELECT regexp_replace(unnest(string_to_array(stemmed_query, ' ')), 's$', '') as word
-    WHERE unnest(string_to_array(stemmed_query, ' ')) ~ 's$'
-    UNION
-    -- Add plural forms (add 's' to end)
-    SELECT unnest(string_to_array(stemmed_query, ' ')) || 's' as word
-    WHERE unnest(string_to_array(stemmed_query, ' ')) !~ 's$'
-  ) variants
-  WHERE word != '' AND length(word) > 1;
+  -- Create singular and plural variants
+  singular_query := regexp_replace(lower(trim(query)), 's$', '');
+  plural_query := lower(trim(query)) || 's';
   
   -- Strategy 1: Exact phrase matching (highest priority)
   RETURN QUERY
@@ -52,24 +37,37 @@ BEGIN
   ORDER BY score DESC
   LIMIT 5;
   
-  -- Strategy 2: Individual word matching with variants
-  IF word_variants IS NOT NULL AND array_length(word_variants, 1) > 0 THEN
+  -- Strategy 2: Try singular form if query ends with 's'
+  IF query ~ 's$' THEN
     RETURN QUERY
     SELECT 
       sl.subject_line,
       sl.open_rate,
-      similarity(sl.subject_line, query)::REAL as similarity,
-      (0.6 * similarity(sl.subject_line, query) + 0.4 * sl.open_rate)::REAL as score
+      similarity(sl.subject_line, singular_query)::REAL as similarity,
+      (0.7 * similarity(sl.subject_line, singular_query) + 0.3 * sl.open_rate)::REAL as score
     FROM subject_lines sl
-    WHERE sl.subject_line ILIKE ANY(
-      SELECT '%' || word || '%' FROM unnest(word_variants) as word
-    )
+    WHERE sl.subject_line ILIKE '%' || singular_query || '%'
     AND sl.subject_line NOT ILIKE '%' || query || '%'  -- Avoid duplicates
     ORDER BY score DESC
     LIMIT 5;
   END IF;
   
-  -- Strategy 3: Fuzzy matching with lower threshold
+  -- Strategy 3: Try plural form if query doesn't end with 's'
+  IF query !~ 's$' THEN
+    RETURN QUERY
+    SELECT 
+      sl.subject_line,
+      sl.open_rate,
+      similarity(sl.subject_line, plural_query)::REAL as similarity,
+      (0.7 * similarity(sl.subject_line, plural_query) + 0.3 * sl.open_rate)::REAL as score
+    FROM subject_lines sl
+    WHERE sl.subject_line ILIKE '%' || plural_query || '%'
+    AND sl.subject_line NOT ILIKE '%' || query || '%'  -- Avoid duplicates
+    ORDER BY score DESC
+    LIMIT 5;
+  END IF;
+  
+  -- Strategy 4: Fuzzy matching with lower threshold
   RETURN QUERY
   SELECT 
     sl.subject_line,
@@ -77,12 +75,12 @@ BEGIN
     similarity(sl.subject_line, query)::REAL as similarity,
     (0.5 * similarity(sl.subject_line, query) + 0.5 * sl.open_rate)::REAL as score
   FROM subject_lines sl
-  WHERE similarity(sl.subject_line, query) > 0.1  -- Lower threshold
+  WHERE similarity(sl.subject_line, query) > 0.1
   AND sl.subject_line NOT ILIKE '%' || query || '%'  -- Avoid duplicates
   ORDER BY score DESC
   LIMIT 5;
   
-  -- Strategy 4: High open rate fallback (if still not enough results)
+  -- Strategy 5: High open rate fallback
   IF (SELECT COUNT(*) FROM subject_lines sl WHERE sl.subject_line ILIKE '%' || query || '%') < 3 THEN
     RETURN QUERY
     SELECT 
@@ -100,99 +98,3 @@ $$ LANGUAGE plpgsql;
 -- Enable the pg_trgm extension for similarity function
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- Create an additional full-text search function for even better results
-CREATE OR REPLACE FUNCTION search_subject_lines_advanced(query TEXT)
-RETURNS TABLE (
-  subject_line TEXT,
-  open_rate DECIMAL(5,4),
-  similarity REAL,
-  score REAL,
-  match_type TEXT
-) AS $$
-DECLARE
-  search_terms TEXT[];
-  term TEXT;
-BEGIN
-  -- Split query into individual terms
-  search_terms := string_to_array(lower(trim(query)), ' ');
-  
-  -- Strategy 1: Full-text search with ranking
-  RETURN QUERY
-  SELECT 
-    sl.subject_line,
-    sl.open_rate,
-    similarity(sl.subject_line, query)::REAL as similarity,
-    (0.7 * similarity(sl.subject_line, query) + 0.3 * sl.open_rate)::REAL as score,
-    'fulltext'::TEXT as match_type
-  FROM subject_lines sl
-  WHERE to_tsvector('english', sl.subject_line) @@ plainto_tsquery('english', query)
-  ORDER BY score DESC
-  LIMIT 3;
-  
-  -- Strategy 2: Individual term matching
-  FOREACH term IN ARRAY search_terms
-  LOOP
-    IF length(term) > 2 THEN
-      RETURN QUERY
-      SELECT 
-        sl.subject_line,
-        sl.open_rate,
-        similarity(sl.subject_line, term)::REAL as similarity,
-        (0.6 * similarity(sl.subject_line, term) + 0.4 * sl.open_rate)::REAL as score,
-        'term'::TEXT as match_type
-      FROM subject_lines sl
-      WHERE sl.subject_line ILIKE '%' || term || '%'
-      AND NOT EXISTS (
-        SELECT 1 FROM search_subject_lines_advanced(query) existing 
-        WHERE existing.subject_line = sl.subject_line
-      )
-      ORDER BY score DESC
-      LIMIT 2;
-    END IF;
-  END LOOP;
-  
-  -- Strategy 3: Stemmed matching (balance/balances)
-  FOREACH term IN ARRAY search_terms
-  LOOP
-    IF length(term) > 2 THEN
-      -- Try singular form
-      IF term ~ 's$' THEN
-        RETURN QUERY
-        SELECT 
-          sl.subject_line,
-          sl.open_rate,
-          similarity(sl.subject_line, regexp_replace(term, 's$', ''))::REAL as similarity,
-          (0.5 * similarity(sl.subject_line, regexp_replace(term, 's$', '')) + 0.5 * sl.open_rate)::REAL as score,
-          'stemmed'::TEXT as match_type
-        FROM subject_lines sl
-        WHERE sl.subject_line ILIKE '%' || regexp_replace(term, 's$', '') || '%'
-        AND NOT EXISTS (
-          SELECT 1 FROM search_subject_lines_advanced(query) existing 
-          WHERE existing.subject_line = sl.subject_line
-        )
-        ORDER BY score DESC
-        LIMIT 2;
-      END IF;
-      
-      -- Try plural form
-      IF term !~ 's$' THEN
-        RETURN QUERY
-        SELECT 
-          sl.subject_line,
-          sl.open_rate,
-          similarity(sl.subject_line, term || 's')::REAL as similarity,
-          (0.5 * similarity(sl.subject_line, term || 's') + 0.5 * sl.open_rate)::REAL as score,
-          'stemmed'::TEXT as match_type
-        FROM subject_lines sl
-        WHERE sl.subject_line ILIKE '%' || term || 's' || '%'
-        AND NOT EXISTS (
-          SELECT 1 FROM search_subject_lines_advanced(query) existing 
-          WHERE existing.subject_line = sl.subject_line
-        )
-        ORDER BY score DESC
-        LIMIT 2;
-      END IF;
-    END IF;
-  END LOOP;
-END;
-$$ LANGUAGE plpgsql;
