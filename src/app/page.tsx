@@ -9,6 +9,11 @@ interface SearchResult {
   grade: string;
   similarity: number;
   score: number;
+  company?: string;
+  sub_industry?: string;
+  mailing_type?: string;
+  read_rate_percentage?: string;
+  inbox_rate_percentage?: string;
 }
 
 export default function Home() {
@@ -129,7 +134,17 @@ export default function Home() {
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${getGradeColor(result.grade)}`}>
                           Grade: {result.grade}
                         </span>
+                        {result.company && (
+                          <span className="text-xs text-gray-400">• {result.company}</span>
+                        )}
                       </div>
+                      {(result.sub_industry || result.mailing_type) && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          {result.sub_industry && <span>{result.sub_industry}</span>}
+                          {result.sub_industry && result.mailing_type && <span> • </span>}
+                          {result.mailing_type && <span>{result.mailing_type}</span>}
+                        </div>
+                      )}
                     </div>
                     <div className="text-right text-sm text-gray-400">
                       <div>Similarity: {(result.similarity * 100).toFixed(0)}%</div>

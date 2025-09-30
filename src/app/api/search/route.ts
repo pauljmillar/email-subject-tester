@@ -58,10 +58,17 @@ export async function GET(request: NextRequest) {
       open_rate: number;
       similarity: number;
       score: number;
+      company?: string;
+      sub_industry?: string;
+      mailing_type?: string;
+      read_rate?: number;
+      inbox_rate?: number;
     }) => ({
       ...item,
       grade: getOpenRateGrade(item.open_rate),
-      open_rate_percentage: (item.open_rate * 100).toFixed(1)
+      open_rate_percentage: (item.open_rate * 100).toFixed(1),
+      read_rate_percentage: item.read_rate ? (item.read_rate * 100).toFixed(1) : null,
+      inbox_rate_percentage: item.inbox_rate ? (item.inbox_rate * 100).toFixed(1) : null
     })) || [];
 
     return NextResponse.json({ results });
