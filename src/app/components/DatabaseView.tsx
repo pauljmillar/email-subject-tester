@@ -39,7 +39,6 @@ export default function DatabaseView() {
     setIsLoading(true);
 
     try {
-      // Simulate API call - replace with actual database chat API
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -53,26 +52,26 @@ export default function DatabaseView() {
         const assistantMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.response || 'I understand you want to chat with the database. This feature will be implemented soon.',
+          content: data.response || 'I apologize, but I could not generate a response.',
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, assistantMessage]);
       } else {
-        // Fallback response for now
-        const assistantMessage: Message = {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: 'I understand you want to chat with the database. This feature will be implemented soon.',
+          content: `Error: ${errorData.error || 'Failed to get response from AI'}`,
           timestamp: new Date(),
         };
-        setMessages(prev => [...prev, assistantMessage]);
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error('Chat error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
+        content: 'Sorry, I encountered a network error. Please check your connection and try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -99,7 +98,12 @@ export default function DatabaseView() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold mb-2 text-[#ECECF1]">Database Chat</h2>
-            <p>Start a conversation with your subject line database</p>
+            <p className="mb-4">Start a conversation with your subject line database</p>
+            <div className="bg-[#343541] border border-[#343541] rounded-lg p-4 max-w-md mx-auto">
+              <p className="text-sm text-[#ECECF1]/70">
+                <strong>Note:</strong> To use the chat feature, you'll need to add your OpenAI API key to the environment variables.
+              </p>
+            </div>
           </div>
         )}
 
