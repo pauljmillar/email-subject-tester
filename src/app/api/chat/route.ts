@@ -26,11 +26,12 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, isInitialRequest = false } = await request.json();
+    const { message, isInitialRequest = false, originalSubjectLine } = await request.json();
     
     console.log('=== CHAT API DEBUG ===');
     console.log('isInitialRequest:', isInitialRequest);
     console.log('message:', message);
+    console.log('originalSubjectLine:', originalSubjectLine);
 
     if (!message) {
       return NextResponse.json(
@@ -61,13 +62,18 @@ export async function POST(request: NextRequest) {
 
     if (isInitialRequest) {
       console.log('Processing INITIAL request');
-      // For initial requests from search page: extract subject line and find similar ones
-      if (message.includes('"') && message.includes('"')) {
-        // Extract text between quotes if it's a formatted prompt
-        const match = message.match(/"([^"]+)"/);
-        if (match) {
-          subjectLineForSearch = match[1];
-          console.log('Extracted subject line:', subjectLineForSearch);
+      // For initial requests: use the originalSubjectLine directly
+      if (originalSubjectLine) {
+        subjectLineForSearch = originalSubjectLine;
+        console.log('Using originalSubjectLine:', subjectLineForSearch);
+      } else {
+        // Fallback: extract from message if originalSubjectLine not provided
+        if (message.includes('"') && message.includes('"')) {
+          const match = message.match(/"([^"]+)"/);
+          if (match) {
+            subjectLineForSearch = match[1];
+            console.log('Extracted subject line from message:', subjectLineForSearch);
+          }
         }
       }
 

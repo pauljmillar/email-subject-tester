@@ -74,7 +74,8 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
         },
         body: JSON.stringify({ 
           message: messageContent,
-          isInitialRequest: isInitialRequest
+          isInitialRequest: isInitialRequest,
+          originalSubjectLine: originalSubjectLine
         }),
       });
 
@@ -184,11 +185,6 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     const messageToSend = messageContent || input.trim();
     if (!messageToSend || isLoading) return;
 
-    // Detect if the message looks like an initial request (has quotes and the full prompt format)
-    const isInitialRequestFormat = messageToSend.includes('"') && 
-                                  messageToSend.includes('"') && 
-                                  messageToSend.includes("This is a subject line I'm considering for a marketing email:");
-
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -199,8 +195,8 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     setMessages(prev => [...prev, userMessage]);
     if (!messageContent) setInput('');
     
-    // Use the sendMessageToAI function to avoid code duplication
-    await sendMessageToAI(messageToSend, isInitialRequestFormat);
+    // All user-typed messages are subsequent requests (not initial)
+    await sendMessageToAI(messageToSend, false);
   };
 
   useEffect(() => {
