@@ -26,7 +26,7 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { message } = await request.json();
+    const { message, isInitialRequest } = await request.json();
 
     if (!message) {
       return NextResponse.json(
@@ -52,73 +52,100 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Extract just the subject line from the message for vector similarity search
-    let subjectLineForSearch = message;
-    if (message.includes('"') && message.includes('"')) {
-      // Extract text between quotes if it's a formatted prompt
-      const match = message.match(/"([^"]+)"/);
-      if (match) {
-        subjectLineForSearch = match[1];
-      }
-    }
-
-    // Generate embedding for the subject line only
-    const embeddingResponse = await openai.embeddings.create({
-      model: 'text-embedding-ada-002',
-      input: subjectLineForSearch,
-    });
-
-    const queryEmbedding = embeddingResponse.data[0].embedding;
-
-    // Find similar subject lines using vector similarity
     let contextSubjectLines: ContextSubjectLine[] = [];
-    
-    // Use hybrid approach: combine vector similarity with keyword matching
-    const { data: similarLines, error: similarError } = await supabase.rpc(
-      'find_similar_subject_lines',
-      {
-        query_embedding: queryEmbedding,
-        similarity_threshold: 0.3, // Lower threshold for vector similarity
-        max_results: 20 // Get more results for filtering
-      }
-    );
+    let subjectLineForSearch = message;
 
-    if (similarError) {
-      console.error('Error finding similar subject lines:', similarError);
+    if (isInitialRequest) {
+      // For initial requests from search page: extract subject line and find similar ones
+      if (message.includes('"') && message.includes('"')) {
+        // Extract text between quotes if it's a formatted prompt
+        const match = message.match(/"([^"]+)"/);
+        if (match) {
+          subjectLineForSearch = match[1];
+        }
+      }
+
+      // Generate embedding for the subject line only
+      const embeddingResponse = await openai.embeddings.create({
+        model: 'text-embedding-ada-002',
+        input: subjectLineForSearch,
+      });
+
+      const queryEmbedding = embeddingResponse.data[0].embedding;
+
+      // Use hybrid approach: combine vector similarity with keyword matching
+      const { data: similarLines, error: similarError } = await supabase.rpc(
+        'find_similar_subject_lines',
+        {
+          query_embedding: queryEmbedding,
+          similarity_threshold: 0.3, // Lower threshold for vector similarity
+          max_results: 20 // Get more results for filtering
+        }
+      );
+
+      if (similarError) {
+        console.error('Error finding similar subject lines:', similarError);
+      } else {
+        // Apply hybrid filtering: combine vector similarity with keyword matching
+        const queryWords = subjectLineForSearch.toLowerCase()
+          .replace(/[^\w\s]/g, ' ') // Remove punctuation
+          .split(/\s+/)
+          .filter((word: string) => word.length > 1); // Include shorter words like "12"
+        
+        contextSubjectLines = (similarLines || [])
+          .map((line: ContextSubjectLine) => {
+            // Calculate keyword matching score with fuzzy matching
+            const matchingWords = queryWords.filter((word: string) => {
+              const lowerSubject = line.subject_line.toLowerCase();
+              return lowerSubject.includes(word) || 
+                     word.includes(lowerSubject) ||
+                     // Check for partial matches (e.g., "bonus" matches "bonuses")
+                     queryWords.some((qw: string) => qw.includes(word) || word.includes(qw));
+            });
+            const keywordScore = queryWords.length > 0 ? matchingWords.length / queryWords.length : 0;
+            
+            // Calculate combined score: 40% vector similarity + 60% keyword matching
+            const combinedScore = (0.4 * line.similarity_score) + (0.6 * keywordScore);
+            
+            return {
+              ...line,
+              keyword_score: keywordScore,
+              combined_score: combinedScore
+            };
+          })
+          .filter((line: ContextSubjectLine & { keyword_score: number; combined_score: number }) => 
+            // Keep lines that have either good vector similarity OR good keyword matching
+            line.similarity_score >= 0.3 || line.keyword_score >= 0.3
+          )
+          .sort((a: ContextSubjectLine & { keyword_score: number; combined_score: number }, b: ContextSubjectLine & { keyword_score: number; combined_score: number }) => b.combined_score - a.combined_score)
+          .slice(0, 10); // Take top 10 results
+      }
     } else {
-      // Apply hybrid filtering: combine vector similarity with keyword matching
-      const queryWords = subjectLineForSearch.toLowerCase()
-        .replace(/[^\w\s]/g, ' ') // Remove punctuation
-        .split(/\s+/)
-        .filter((word: string) => word.length > 1); // Include shorter words like "12"
-      
-      contextSubjectLines = (similarLines || [])
-        .map((line: ContextSubjectLine) => {
-          // Calculate keyword matching score with fuzzy matching
-          const matchingWords = queryWords.filter((word: string) => {
-            const lowerSubject = line.subject_line.toLowerCase();
-            return lowerSubject.includes(word) || 
-                   word.includes(lowerSubject) ||
-                   // Check for partial matches (e.g., "bonus" matches "bonuses")
-                   queryWords.some((qw: string) => qw.includes(word) || word.includes(qw));
-          });
-          const keywordScore = queryWords.length > 0 ? matchingWords.length / queryWords.length : 0;
-          
-          // Calculate combined score: 40% vector similarity + 60% keyword matching
-          const combinedScore = (0.4 * line.similarity_score) + (0.6 * keywordScore);
-          
-          return {
-            ...line,
-            keyword_score: keywordScore,
-            combined_score: combinedScore
-          };
-        })
-        .filter((line: ContextSubjectLine & { keyword_score: number; combined_score: number }) => 
-          // Keep lines that have either good vector similarity OR good keyword matching
-          line.similarity_score >= 0.3 || line.keyword_score >= 0.3
-        )
-        .sort((a: ContextSubjectLine & { keyword_score: number; combined_score: number }, b: ContextSubjectLine & { keyword_score: number; combined_score: number }) => b.combined_score - a.combined_score)
-        .slice(0, 10); // Take top 10 results
+      // For subsequent chat messages: find high-performing subject lines as context
+      const embeddingResponse = await openai.embeddings.create({
+        model: 'text-embedding-ada-002',
+        input: message,
+      });
+
+      const queryEmbedding = embeddingResponse.data[0].embedding;
+
+      // Find similar subject lines with high open rates
+      const { data: similarLines, error: similarError } = await supabase.rpc(
+        'find_similar_subject_lines',
+        {
+          query_embedding: queryEmbedding,
+          similarity_threshold: 0.4, // Higher threshold for better relevance
+          max_results: 5 // Fewer results for context
+        }
+      );
+
+      if (!similarError && similarLines) {
+        // Filter for high-performing subject lines (open rate > 10%)
+        contextSubjectLines = similarLines
+          .filter((line: ContextSubjectLine) => line.open_rate > 0.1)
+          .sort((a: ContextSubjectLine, b: ContextSubjectLine) => b.open_rate - a.open_rate)
+          .slice(0, 3); // Take top 3 high-performing examples
+      }
     }
 
     // Create context from similar subject lines
@@ -134,7 +161,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the system prompt with context
-    const systemPrompt = `You are an expert email marketing consultant specializing in subject line optimization. Your goal is to help users create compelling, high-performing email subject lines that drive engagement and conversions.
+    let systemPrompt = '';
+    
+    if (isInitialRequest) {
+      // For initial requests: focus on subject line analysis and improvement
+      systemPrompt = `You are an expert email marketing consultant specializing in subject line optimization. Your goal is to help users create compelling, high-performing email subject lines that drive engagement and conversions.
 
 Key principles for effective subject lines:
 - Keep them concise (under 50 characters when possible)
@@ -154,6 +185,14 @@ Analyze the user's subject line and provide specific, actionable suggestions for
 4. Specific word choices and phrasing suggestions
 
 Be encouraging but honest about what works and what doesn't. Provide concrete examples.`;
+    } else {
+      // For subsequent chat messages: general email marketing consultant
+      systemPrompt = `You are an expert email marketing consultant. Help the user with their email marketing questions and provide valuable insights based on your expertise.
+
+${contextText}
+
+Use the provided high-performing subject line examples as reference when relevant to the conversation. Be helpful, knowledgeable, and provide actionable advice.`;
+    }
 
     // Generate AI response
     const completion = await openai.chat.completions.create({

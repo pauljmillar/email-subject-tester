@@ -56,7 +56,7 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     ));
   }, []);
 
-  const sendMessageToAI = useCallback(async (messageContent: string) => {
+  const sendMessageToAI = useCallback(async (messageContent: string, isInitialRequest: boolean = false) => {
     if (!messageContent || isLoading) return;
 
     setIsLoading(true);
@@ -67,15 +67,18 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message: messageContent }),
+        body: JSON.stringify({ 
+          message: messageContent,
+          isInitialRequest: isInitialRequest
+        }),
       });
 
       if (response.ok) {
         const data = await response.json();
         let fullResponse = data.response || 'I apologize, but I could not generate a response.';
         
-        // Handle similar subject lines if they exist - integrate into response
-        if (data.context_subject_lines && data.context_subject_lines.length > 0) {
+        // Handle similar subject lines if they exist - only for initial requests
+        if (isInitialRequest && data.context_subject_lines && data.context_subject_lines.length > 0) {
           const similarLines = data.context_subject_lines.map((line: {
             subject_line: string;
             open_rate: number;
@@ -182,7 +185,7 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     if (!messageContent) setInput('');
     
     // Use the sendMessageToAI function to avoid code duplication
-    await sendMessageToAI(messageToSend);
+    await sendMessageToAI(messageToSend, false);
   };
 
   useEffect(() => {
@@ -197,7 +200,7 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
       onMessageSent?.();
       
       // Automatically send the message to get AI response
-      sendMessageToAI(initialMessage);
+      sendMessageToAI(initialMessage, true);
     }
   }, [initialMessage, messages.length, onMessageSent, sendMessageToAI]);
 
