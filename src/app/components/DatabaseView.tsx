@@ -59,6 +59,11 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
   const sendMessageToAI = useCallback(async (messageContent: string, isInitialRequest: boolean = false) => {
     if (!messageContent || isLoading) return;
 
+    console.log('=== DATABASE VIEW DEBUG ===');
+    console.log('sendMessageToAI called with:');
+    console.log('messageContent:', messageContent);
+    console.log('isInitialRequest:', isInitialRequest);
+
     setIsLoading(true);
 
     try {
@@ -76,6 +81,11 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
       if (response.ok) {
         const data = await response.json();
         let fullResponse = data.response || 'I apologize, but I could not generate a response.';
+        
+        console.log('API Response:');
+        console.log('data.context_subject_lines length:', data.context_subject_lines?.length || 0);
+        console.log('isInitialRequest:', isInitialRequest);
+        console.log('Will process similar lines?', isInitialRequest && data.context_subject_lines && data.context_subject_lines.length > 0);
         
         // Handle similar subject lines if they exist - only for initial requests
         if (isInitialRequest && data.context_subject_lines && data.context_subject_lines.length > 0) {
@@ -174,6 +184,11 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     const messageToSend = messageContent || input.trim();
     if (!messageToSend || isLoading) return;
 
+    // Detect if the message looks like an initial request (has quotes and the full prompt format)
+    const isInitialRequestFormat = messageToSend.includes('"') && 
+                                  messageToSend.includes('"') && 
+                                  messageToSend.includes("This is a subject line I'm considering for a marketing email:");
+
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -185,7 +200,7 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     if (!messageContent) setInput('');
     
     // Use the sendMessageToAI function to avoid code duplication
-    await sendMessageToAI(messageToSend, false);
+    await sendMessageToAI(messageToSend, isInitialRequestFormat);
   };
 
   useEffect(() => {

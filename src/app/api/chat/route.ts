@@ -26,7 +26,11 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, isInitialRequest } = await request.json();
+    const { message, isInitialRequest = false } = await request.json();
+    
+    console.log('=== CHAT API DEBUG ===');
+    console.log('isInitialRequest:', isInitialRequest);
+    console.log('message:', message);
 
     if (!message) {
       return NextResponse.json(
@@ -56,12 +60,14 @@ export async function POST(request: NextRequest) {
     let subjectLineForSearch = message;
 
     if (isInitialRequest) {
+      console.log('Processing INITIAL request');
       // For initial requests from search page: extract subject line and find similar ones
       if (message.includes('"') && message.includes('"')) {
         // Extract text between quotes if it's a formatted prompt
         const match = message.match(/"([^"]+)"/);
         if (match) {
           subjectLineForSearch = match[1];
+          console.log('Extracted subject line:', subjectLineForSearch);
         }
       }
 
@@ -121,6 +127,7 @@ export async function POST(request: NextRequest) {
           .slice(0, 10); // Take top 10 results
       }
     } else {
+      console.log('Processing SUBSEQUENT request');
       // For subsequent chat messages: no similar subject lines, just clean chat
       contextSubjectLines = [];
     }
@@ -140,7 +147,11 @@ export async function POST(request: NextRequest) {
     // Create the system prompt with context
     let systemPrompt = '';
     
+    console.log('contextSubjectLines.length:', contextSubjectLines.length);
+    console.log('contextText:', contextText);
+    
     if (isInitialRequest) {
+      console.log('Creating INITIAL system prompt');
       // For initial requests: focus on subject line analysis and improvement
       systemPrompt = `You are an expert email marketing consultant specializing in subject line optimization. Your goal is to help users create compelling, high-performing email subject lines that drive engagement and conversions.
 
@@ -163,6 +174,7 @@ Analyze the user's subject line and provide specific, actionable suggestions for
 
 Be encouraging but honest about what works and what doesn't. Provide concrete examples.`;
     } else {
+      console.log('Creating SUBSEQUENT system prompt');
       // For subsequent chat messages: general email marketing consultant
       systemPrompt = `You are an expert email marketing consultant. Help the user with their email marketing questions and provide valuable insights based on your expertise.
 
@@ -170,6 +182,8 @@ ${contextText}
 
 Use the provided high-performing subject line examples as reference when relevant to the conversation. Be helpful, knowledgeable, and provide actionable advice.`;
     }
+    
+    console.log('Final system prompt:', systemPrompt);
 
     // Generate AI response
     const completion = await openai.chat.completions.create({
@@ -183,6 +197,10 @@ Use the provided high-performing subject line examples as reference when relevan
     });
 
     const response = completion.choices[0]?.message?.content || 'I apologize, but I could not generate a response.';
+
+    console.log('Final response length:', response.length);
+    console.log('Returning context_subject_lines count:', contextSubjectLines.length);
+    console.log('=== END CHAT API DEBUG ===');
 
     return NextResponse.json({ 
       response,
