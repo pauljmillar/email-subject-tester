@@ -85,20 +85,24 @@ def import_subject_lines(csv_file_path):
         
         for row_num, row in enumerate(reader, start=2):  # Start at 2 because of header
             try:
+                # Skip rows with redacted subjects
+                if row.get('Subject', '').strip() == '[Subject Redacted]':
+                    continue
+                
                 # Map CSV columns to database fields
                 subject_data = {
-                    'subject_line': row['Subject'],
-                    'open_rate': parse_decimal(row['Read Rate']),  # Using Read Rate as open_rate
-                    'date_sent': parse_date(row['Date']),
-                    'company': row['Company'],
-                    'sub_industry': row['Sub-Industry'],
-                    'mailing_type': row['Mailing Type'],
-                    'inbox_rate': parse_decimal(row['Inbox Rate']),
-                    'spam_rate': parse_decimal(row['Spam Rate']),
-                    'read_rate': parse_decimal(row['Read Rate']),
-                    'read_delete_rate': parse_decimal(row['Read & Delete Rate']),
-                    'delete_without_read_rate': parse_decimal(row['Delete Without Read Rate']),
-                    'projected_volume': parse_bigint(row['Projected Volume'])
+                    'subject_line': row.get('Subject', '').strip(),
+                    'open_rate': parse_decimal(row.get('Read Rate', '')),  # Using Read Rate as open_rate
+                    'date_sent': parse_date(row.get('Date', '')),
+                    'company': row.get('Company', '').strip(),
+                    'sub_industry': row.get('Sub-Industry', '').strip(),
+                    'mailing_type': row.get('Mailing Type', '').strip(),
+                    'inbox_rate': parse_decimal(row.get('Inbox Rate', '')),
+                    'spam_rate': parse_decimal(row.get('Spam Rate', '')),
+                    'read_rate': parse_decimal(row.get('Read Rate', '')),
+                    'read_delete_rate': parse_decimal(row.get('Read & Delete Rate', '')),
+                    'delete_without_read_rate': parse_decimal(row.get('Delete Without Read Rate', '')),
+                    'projected_volume': parse_bigint(row.get('Projected Volume', ''))
                 }
                 
                 # Skip rows with missing essential data
@@ -119,7 +123,11 @@ def import_subject_lines(csv_file_path):
                     error_count += 1
                     
             except Exception as e:
-                print(f"Error processing row {row_num}: {e}")
+                # Only print error for first few rows to avoid spam
+                if error_count < 10:
+                    print(f"Error processing row {row_num}: {e}")
+                elif error_count == 10:
+                    print("... (suppressing further error messages)")
                 error_count += 1
                 continue
         

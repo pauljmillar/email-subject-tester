@@ -37,8 +37,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Use the enhanced search function with multiple strategies
-    const { data, error } = await supabase.rpc('search_subject_lines', {
+    // Use the new advanced search function with word-by-word matching
+    const { data, error } = await supabase.rpc('search_subject_lines_advanced', {
       query: query
     });
 
@@ -63,6 +63,8 @@ export async function GET(request: NextRequest) {
       mailing_type?: string;
       read_rate?: number;
       inbox_rate?: number;
+      match_type?: string;
+      word_positions?: number[];
     }) => ({
       ...item,
       grade: getOpenRateGrade(item.open_rate),

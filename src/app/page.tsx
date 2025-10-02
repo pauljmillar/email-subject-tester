@@ -14,6 +14,8 @@ interface SearchResult {
   mailing_type?: string;
   read_rate_percentage?: string;
   inbox_rate_percentage?: string;
+  match_type?: string;
+  word_positions?: number[];
 }
 
 export default function Home() {
@@ -83,6 +85,27 @@ export default function Home() {
     }
   };
 
+  // Function to highlight matching words in subject lines
+  const highlightMatchingWords = (subjectLine: string, query: string) => {
+    if (!query.trim()) return subjectLine;
+    
+    const queryWords = query.toLowerCase().trim().split(/\s+/);
+    const subjectWords = subjectLine.split(/(\s+)/);
+    
+    return subjectWords.map((word, index) => {
+      const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
+      const isMatch = queryWords.some(queryWord => 
+        cleanWord.includes(queryWord.toLowerCase()) || 
+        queryWord.toLowerCase().includes(cleanWord)
+      );
+      
+      if (isMatch && cleanWord) {
+        return <span key={index} className="bg-yellow-200 text-yellow-900 font-semibold px-1 rounded">{word}</span>;
+      }
+      return <span key={index}>{word}</span>;
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-2xl">
@@ -127,7 +150,7 @@ export default function Home() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="text-white font-medium mb-1">
-                        {result.subject_line}
+                        {highlightMatchingWords(result.subject_line, query)}
                       </p>
                       <div className="flex items-center space-x-3 text-sm text-gray-300">
                         <span>Open rate: {result.open_rate_percentage}%</span>
@@ -136,6 +159,9 @@ export default function Home() {
                         </span>
                         {result.company && (
                           <span className="text-xs text-gray-400">• {result.company}</span>
+                        )}
+                        {result.match_type && (
+                          <span className="text-xs text-blue-400">• {result.match_type.replace(/_/g, ' ')}</span>
                         )}
                       </div>
                       {(result.sub_industry || result.mailing_type) && (
