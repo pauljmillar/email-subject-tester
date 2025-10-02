@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 interface Message {
   id: string;
@@ -28,7 +28,7 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const typewriterEffect = async (messageId: string, fullContent: string, speed: number = 30) => {
+  const typewriterEffect = useCallback(async (messageId: string, fullContent: string, speed: number = 30) => {
     const words = fullContent.split(' ');
     let currentContent = '';
     
@@ -54,25 +54,9 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
         ? { ...msg, isTyping: false }
         : msg
     ));
-  };
+  }, []);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Handle initial message from suggestion request
-  useEffect(() => {
-    if (initialMessage && messages.length === 0 && !initialMessageProcessed.current) {
-      initialMessageProcessed.current = true;
-      // Don't add user message for initial suggestions - just get AI response
-      onMessageSent?.();
-      
-      // Automatically send the message to get AI response
-      sendMessageToAI(initialMessage);
-    }
-  }, [initialMessage, messages.length, onMessageSent]);
-
-  const sendMessageToAI = async (messageContent: string) => {
+  const sendMessageToAI = useCallback(async (messageContent: string) => {
     if (!messageContent || isLoading) return;
 
     setIsLoading(true);
@@ -92,7 +76,14 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
         
         // Handle similar subject lines if they exist - integrate into response
         if (data.context_subject_lines && data.context_subject_lines.length > 0) {
-          const similarLines = data.context_subject_lines.map((line: any) => ({
+          const similarLines = data.context_subject_lines.map((line: {
+            subject_line: string;
+            open_rate: number;
+            company?: string;
+            date_sent?: string;
+            spam_rate?: number;
+            similarity_score?: number;
+          }) => ({
             subject_line: line.subject_line,
             open_rate: line.open_rate,
             company: line.company,
@@ -113,7 +104,14 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
           
           // Create formatted similar subject lines text
           let similarLinesText = `You're considering this subject line: "${subjectLine}"\n\nHere are some similar subject lines to consider:\n\n`;
-          similarLines.forEach((line, index) => {
+          similarLines.forEach((line: {
+            subject_line: string;
+            open_rate: number;
+            company?: string;
+            date_sent?: string;
+            spam_rate?: number;
+            similarity_score?: number;
+          }, index: number) => {
             similarLinesText += `${index + 1}. "${line.subject_line}"`;
             similarLinesText += ` (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
             if (line.company) similarLinesText += `, Company: ${line.company}`;
@@ -166,7 +164,7 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [isLoading, originalSubjectLine, typewriterEffect]);
 
   const handleSubmit = async (e: React.FormEvent, messageContent?: string) => {
     e.preventDefault();
@@ -186,6 +184,22 @@ export default function DatabaseView({ initialMessage, originalSubjectLine, onMe
     // Use the sendMessageToAI function to avoid code duplication
     await sendMessageToAI(messageToSend);
   };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Handle initial message from suggestion request
+  useEffect(() => {
+    if (initialMessage && messages.length === 0 && !initialMessageProcessed.current) {
+      initialMessageProcessed.current = true;
+      // Don't add user message for initial suggestions - just get AI response
+      onMessageSent?.();
+      
+      // Automatically send the message to get AI response
+      sendMessageToAI(initialMessage);
+    }
+  }, [initialMessage, messages.length, onMessageSent, sendMessageToAI]);
 
   return (
     <div className="flex flex-col h-screen bg-[#202123]">

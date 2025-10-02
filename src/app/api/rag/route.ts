@@ -2,6 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
+interface ContextSubjectLine {
+  subject_line_id: number;
+  subject_line: string;
+  open_rate: number;
+  similarity_score: number;
+  keyword_score?: number;
+  combined_score?: number;
+  company?: string;
+  sub_industry?: string;
+  mailing_type?: string;
+  read_rate?: number;
+  inbox_rate?: number;
+  date_sent?: string;
+  spam_rate?: number;
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const openai = new OpenAI({
@@ -80,19 +96,19 @@ export async function POST(request: NextRequest) {
           const queryWords = subjectLineForSearch.toLowerCase()
             .replace(/[^\w\s]/g, ' ') // Remove punctuation
             .split(/\s+/)
-            .filter(word => word.length > 1); // Include shorter words like "12"
+            .filter((word: string) => word.length > 1); // Include shorter words like "12"
           
           console.log('Query words extracted:', queryWords);
           
           contextSubjectLines = (similarLines || [])
-            .map(line => {
+            .map((line: ContextSubjectLine) => {
               // Calculate keyword matching score with fuzzy matching
-              const matchingWords = queryWords.filter(word => {
+              const matchingWords = queryWords.filter((word: string) => {
                 const lowerSubject = line.subject_line.toLowerCase();
                 return lowerSubject.includes(word) || 
                        word.includes(lowerSubject) ||
                        // Check for partial matches (e.g., "bonus" matches "bonuses")
-                       queryWords.some(qw => qw.includes(word) || word.includes(qw));
+                       queryWords.some((qw: string) => qw.includes(word) || word.includes(qw));
               });
               const keywordScore = queryWords.length > 0 ? matchingWords.length / queryWords.length : 0;
               
@@ -105,11 +121,11 @@ export async function POST(request: NextRequest) {
                 combined_score: combinedScore
               };
             })
-            .filter(line => 
+            .filter((line: ContextSubjectLine & { keyword_score: number; combined_score: number }) => 
               // Keep lines that have either good vector similarity OR good keyword matching
               line.similarity_score >= 0.3 || line.keyword_score >= 0.3
             )
-            .sort((a, b) => b.combined_score - a.combined_score)
+            .sort((a: ContextSubjectLine & { keyword_score: number; combined_score: number }, b: ContextSubjectLine & { keyword_score: number; combined_score: number }) => b.combined_score - a.combined_score)
             .slice(0, 10); // Take top 10 results
         }
     } else if (context_type === 'top_performing') {
@@ -139,7 +155,7 @@ export async function POST(request: NextRequest) {
     let contextText = '';
     if (contextSubjectLines.length > 0) {
       contextText = '\n\nHere are some relevant high-performing subject lines from our database:\n';
-      contextSubjectLines.forEach((line: any, index: number) => {
+      contextSubjectLines.forEach((line: ContextSubjectLine, index: number) => {
         contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
         if (line.company) contextText += `, Company: ${line.company}`;
         if (line.sub_industry) contextText += `, Industry: ${line.sub_industry}`;
