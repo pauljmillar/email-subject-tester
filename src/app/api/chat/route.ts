@@ -178,9 +178,7 @@ Be encouraging but honest about what works and what doesn't. Provide concrete ex
       // For subsequent chat messages: general email marketing consultant
       systemPrompt = `You are an expert email marketing consultant. Help the user with their email marketing questions and provide valuable insights based on your expertise.
 
-${contextText}
-
-Use the provided high-performing subject line examples as reference when relevant to the conversation. Be helpful, knowledgeable, and provide actionable advice.`;
+Be helpful, knowledgeable, and provide actionable advice. Focus on answering their specific questions about email marketing best practices, subject line optimization, and engagement strategies.`;
     }
     
     console.log('Final system prompt:', systemPrompt);
