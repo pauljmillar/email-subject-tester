@@ -121,31 +121,8 @@ export async function POST(request: NextRequest) {
           .slice(0, 10); // Take top 10 results
       }
     } else {
-      // For subsequent chat messages: find high-performing subject lines as context
-      const embeddingResponse = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: message,
-      });
-
-      const queryEmbedding = embeddingResponse.data[0].embedding;
-
-      // Find similar subject lines with high open rates
-      const { data: similarLines, error: similarError } = await supabase.rpc(
-        'find_similar_subject_lines',
-        {
-          query_embedding: queryEmbedding,
-          similarity_threshold: 0.4, // Higher threshold for better relevance
-          max_results: 5 // Fewer results for context
-        }
-      );
-
-      if (!similarError && similarLines) {
-        // Filter for high-performing subject lines (open rate > 10%)
-        contextSubjectLines = similarLines
-          .filter((line: ContextSubjectLine) => line.open_rate > 0.1)
-          .sort((a: ContextSubjectLine, b: ContextSubjectLine) => b.open_rate - a.open_rate)
-          .slice(0, 3); // Take top 3 high-performing examples
-      }
+      // For subsequent chat messages: no similar subject lines, just clean chat
+      contextSubjectLines = [];
     }
 
     // Create context from similar subject lines
