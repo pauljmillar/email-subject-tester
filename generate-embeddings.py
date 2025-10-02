@@ -97,20 +97,52 @@ class EmbeddingGenerator:
         """Generate embeddings for all subject lines in the database"""
         print("🚀 Starting embedding generation...")
         
-        # First, check if embeddings already exist
-        existing_embeddings = self.supabase.table('subject_line_embeddings').select('subject_line_id').execute()
-        existing_ids = {row['subject_line_id'] for row in existing_embeddings.data} if existing_embeddings.data else set()
+        # First, check if embeddings already exist (with pagination)
+        print("🔍 Checking existing embeddings...")
+        existing_ids = set()
+        page_size = 1000
+        offset = 0
         
-        # Get all subject lines
+        while True:
+            response = self.supabase.table('subject_line_embeddings').select('subject_line_id').range(offset, offset + page_size - 1).execute()
+            
+            if not response.data:
+                break
+                
+            existing_ids.update({row['subject_line_id'] for row in response.data})
+            
+            if len(response.data) < page_size:
+                break
+                
+            offset += page_size
+        
+        print(f"📊 Found {len(existing_ids)} existing embeddings")
+        
+        # Get all subject lines with pagination
         print("📊 Fetching subject lines from database...")
-        response = self.supabase.table('subject_lines').select('id, subject_line').execute()
+        all_subject_lines = []
+        page_size = 1000
+        offset = 0
         
-        if not response.data:
+        while True:
+            response = self.supabase.table('subject_lines').select('id, subject_line').range(offset, offset + page_size - 1).execute()
+            
+            if not response.data:
+                break
+                
+            all_subject_lines.extend(response.data)
+            print(f"📈 Fetched {len(all_subject_lines)} subject lines so far...")
+            
+            if len(response.data) < page_size:
+                break
+                
+            offset += page_size
+        
+        if not all_subject_lines:
             print("❌ No subject lines found in database")
             return
         
-        all_subject_lines = response.data
-        print(f"📈 Found {len(all_subject_lines)} subject lines")
+        print(f"📈 Found {len(all_subject_lines)} total subject lines")
         
         # Filter out already processed subject lines
         unprocessed = [sl for sl in all_subject_lines if sl['id'] not in existing_ids]
