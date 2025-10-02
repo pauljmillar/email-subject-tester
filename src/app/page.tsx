@@ -9,19 +9,25 @@ import LibraryView from './components/LibraryView';
 
 export default function Home() {
   const [activeView, setActiveView] = useState('search');
+  const [initialChatMessage, setInitialChatMessage] = useState<string | null>(null);
+
+  const handleSuggestionRequest = (subjectLine: string) => {
+    const prompt = `This is a subject line I'm considering for a marketing email: "${subjectLine}". Provide some suggestions to help me achieve higher engagement.`;
+    setInitialChatMessage(prompt);
+  };
 
   const renderActiveView = () => {
     switch (activeView) {
       case 'search':
-        return <SearchView />;
+        return <SearchView onViewChange={setActiveView} onSuggestionRequest={handleSuggestionRequest} />;
       case 'database':
-        return <DatabaseView />;
+        return <DatabaseView initialMessage={initialChatMessage} onMessageSent={() => setInitialChatMessage(null)} />;
       case 'new':
         return <NewView />;
       case 'library':
         return <LibraryView />;
       default:
-        return <SearchView />;
+        return <SearchView onViewChange={setActiveView} onSuggestionRequest={handleSuggestionRequest} />;
     }
   };
 

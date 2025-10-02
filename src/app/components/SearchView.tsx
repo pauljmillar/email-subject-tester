@@ -18,7 +18,12 @@ interface SearchResult {
   word_positions?: number[];
 }
 
-export default function SearchView() {
+interface SearchViewProps {
+  onViewChange: (view: string) => void;
+  onSuggestionRequest: (subjectLine: string) => void;
+}
+
+export default function SearchView({ onViewChange, onSuggestionRequest }: SearchViewProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,6 +73,13 @@ export default function SearchView() {
   const handleResultClick = (subjectLine: string) => {
     setQuery(subjectLine);
     setShowSuggestions(false);
+  };
+
+  const handleSuggestionRequest = () => {
+    if (query.trim()) {
+      onSuggestionRequest(query.trim());
+      onViewChange('database');
+    }
   };
 
   const getGradeColor = (grade: string) => {
@@ -122,14 +134,30 @@ export default function SearchView() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setShowSuggestions(results.length > 0)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && query.trim()) {
+                  handleSuggestionRequest();
+                }
+              }}
               placeholder="Start typing your subject line here"
-              className="w-full px-6 py-4 text-lg bg-[#343541] text-[#ECECF1] border border-[#343541] rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[#10A37F] focus:border-transparent placeholder-[#ECECF1]/50"
+              className="w-full px-6 py-4 pr-20 text-lg bg-[#343541] text-[#ECECF1] border border-[#343541] rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-[#10A37F] focus:border-transparent placeholder-[#ECECF1]/50"
             />
-            {isLoading && (
-              <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+            <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
+              {isLoading && (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#10A37F]"></div>
-              </div>
-            )}
+              )}
+              {query.trim() && !isLoading && (
+                <button
+                  onClick={handleSuggestionRequest}
+                  className="p-2 bg-[#10A37F] text-[#ECECF1] rounded-lg hover:bg-[#10A37F]/80 transition-colors"
+                  title="Get AI suggestions for this subject line"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {showSuggestions && results.length > 0 && (
