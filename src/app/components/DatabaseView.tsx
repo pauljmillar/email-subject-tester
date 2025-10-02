@@ -10,16 +10,19 @@ interface Message {
   isTyping?: boolean;
 }
 
+
 interface DatabaseViewProps {
   initialMessage?: string | null;
+  originalSubjectLine?: string | null;
   onMessageSent?: () => void;
 }
 
-export default function DatabaseView({ initialMessage, onMessageSent }: DatabaseViewProps) {
+export default function DatabaseView({ initialMessage, originalSubjectLine, onMessageSent }: DatabaseViewProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialMessageProcessed = useRef(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -59,14 +62,9 @@ export default function DatabaseView({ initialMessage, onMessageSent }: Database
 
   // Handle initial message from suggestion request
   useEffect(() => {
-    if (initialMessage && messages.length === 0) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        role: 'user',
-        content: initialMessage,
-        timestamp: new Date(),
-      };
-      setMessages([userMessage]);
+    if (initialMessage && messages.length === 0 && !initialMessageProcessed.current) {
+      initialMessageProcessed.current = true;
+      // Don't add user message for initial suggestions - just get AI response
       onMessageSent?.();
       
       // Automatically send the message to get AI response
@@ -90,18 +88,62 @@ export default function DatabaseView({ initialMessage, onMessageSent }: Database
 
       if (response.ok) {
         const data = await response.json();
-        const fullResponse = data.response || 'I apologize, but I could not generate a response.';
+        let fullResponse = data.response || 'I apologize, but I could not generate a response.';
+        
+        // Handle similar subject lines if they exist - integrate into response
+        if (data.context_subject_lines && data.context_subject_lines.length > 0) {
+          const similarLines = data.context_subject_lines.map((line: any) => ({
+            subject_line: line.subject_line,
+            open_rate: line.open_rate,
+            company: line.company,
+            date_sent: line.date_sent,
+            spam_rate: line.spam_rate,
+            similarity_score: line.similarity_score
+          }));
+          
+          // Use the original subject line if available, otherwise extract from message content
+          let subjectLine = originalSubjectLine || messageContent;
+          if (!originalSubjectLine && messageContent.includes('"') && messageContent.includes('"')) {
+            // Extract text between quotes if it's a formatted prompt
+            const match = messageContent.match(/"([^"]+)"/);
+            if (match) {
+              subjectLine = match[1];
+            }
+          }
+          
+          // Create formatted similar subject lines text
+          let similarLinesText = `You're considering this subject line: "${subjectLine}"\n\nHere are some similar subject lines to consider:\n\n`;
+          similarLines.forEach((line, index) => {
+            similarLinesText += `${index + 1}. "${line.subject_line}"`;
+            similarLinesText += ` (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
+            if (line.company) similarLinesText += `, Company: ${line.company}`;
+            if (line.date_sent) similarLinesText += `, Date: ${new Date(line.date_sent).toLocaleDateString()}`;
+            if (line.spam_rate) similarLinesText += `, Spam Rate: ${(line.spam_rate * 100).toFixed(1)}%`;
+            if (line.similarity_score) similarLinesText += `, Similarity: ${(line.similarity_score * 100).toFixed(0)}%`;
+            similarLinesText += `)\n`;
+          });
+          
+          // Add spacing and intro before the AI response
+          similarLinesText += `\n\nBased on the successful subject lines in the financial services industry, here are some suggestions to improve your subject line for higher engagement:\n\n`;
+          
+          // Prepend the similar lines to the response
+          fullResponse = similarLinesText + fullResponse;
+        }
+        
+        // Create assistant message and start typewriter effect
+        const assistantMessageId = (Date.now() + 1).toString();
         const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
+          id: assistantMessageId,
           role: 'assistant',
           content: '', // Start with empty content
           timestamp: new Date(),
           isTyping: true,
         };
+        
         setMessages(prev => [...prev, assistantMessage]);
         
         // Start typewriter effect
-        await typewriterEffect(assistantMessage.id, fullResponse);
+        await typewriterEffect(assistantMessageId, fullResponse);
       } else {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
         const errorMessage: Message = {
