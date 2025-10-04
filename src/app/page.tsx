@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import SearchView from './components/SearchView';
-import DatabaseView from './components/DatabaseView';
+import DatabaseViewIntent from './components/DatabaseViewIntent';
 import NewView from './components/NewView';
 import LibraryView from './components/LibraryView';
 
@@ -23,15 +23,15 @@ export default function Home() {
     switch (activeView) {
       case 'search':
         return <SearchView onViewChange={setActiveView} onSuggestionRequest={handleSuggestionRequest} />;
-      case 'database':
-        return <DatabaseView 
-          initialMessage={initialChatMessage} 
-          originalSubjectLine={originalSubjectLine}
-          onMessageSent={() => {
-            setInitialChatMessage(null);
-            setOriginalSubjectLine(null);
-          }} 
-        />;
+              case 'database':
+                return <DatabaseViewIntent 
+                  initialMessage={initialChatMessage} 
+                  originalSubjectLine={originalSubjectLine}
+                  onMessageSent={() => {
+                    setInitialChatMessage(null);
+                    setOriginalSubjectLine(null);
+                  }} 
+                />;
       case 'new':
         return <NewView />;
       case 'library':

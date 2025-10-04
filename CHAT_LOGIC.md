@@ -16,7 +16,7 @@ handleSuggestionRequest(subjectLine):
 ↓
 DatabaseView receives initialMessage and originalSubjectLine
 ↓
-useEffect triggers sendMessageToAI(initialMessage, true)
+useEffect triggers sendMessageToAI(initialMessage, true)  // ← ONLY the arrow button sets isInitialRequest: true
 ↓
 API Call: POST /api/chat
   - isInitialRequest: true
@@ -53,7 +53,7 @@ Display Logic:
 User types message in chat input
 ↓
 handleSubmit():
-  - All user-typed messages are subsequent requests (isInitialRequest = false)
+  - All user-typed messages are subsequent requests (isInitialRequest = false)  // ← Chat input NEVER sets isInitialRequest: true
   - Call sendMessageToAI(message, false)
 ↓
 API Call: POST /api/chat
@@ -93,9 +93,20 @@ Display Logic:
 
 **No RAG on subsequent messages** - they get general email marketing advice without database context.
 
+## **Key Decision Points**
+
+**What sets `isInitialRequest: true`?**
+- ✅ **ONLY**: Clicking the arrow button from the Search page
+- ❌ **NEVER**: Typing in the chat input field
+
+**What sets `isInitialRequest: false`?**
+- ✅ **ALL**: User-typed messages in chat input
+- ✅ **ALL**: Follow-up questions in chat
+
 ## **Key Components**
 
-- **Search Page**: User enters subject line, clicks arrow
+- **Search Page**: User enters subject line, clicks arrow → `isInitialRequest: true`
+- **Chat Input**: User types message → `isInitialRequest: false`
 - **Chat API**: Handles RAG and LLM calls
 - **DatabaseView**: Manages chat UI and message display
 - **Vector Search**: Finds similar subject lines using embeddings
