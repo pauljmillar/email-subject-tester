@@ -71,6 +71,10 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
   // Debounce search input
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+  
+  // Modal state
+  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fetchCampaigns = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) {
@@ -165,6 +169,16 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleRowClick = (campaign: Campaign) => {
+    setSelectedCampaign(campaign);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedCampaign(null);
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -263,7 +277,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
   return (
     <div className="min-h-screen bg-[#202123] p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-[#ECECF1] mb-6">Chime - Competitive Set Campaigns</h1>
+        <h1 className="text-4xl font-bold text-[#ECECF1] mb-8 mt-4">Chime - Competitive Set Campaigns</h1>
         
         {/* Filters and Search */}
         <div className="rounded-lg p-4 mb-6">
@@ -398,7 +412,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
               </thead>
               <tbody>
                 {campaigns.map((campaign) => (
-                  <tr key={campaign.id} className="hover:bg-[#2A2A2A]">
+                  <tr key={campaign.id} className="hover:bg-[#2A2A2A] cursor-pointer" onClick={() => handleRowClick(campaign)}>
                     <td className="px-4 py-4">
                       <Image 
                         src={campaign.thumbnail_url?.includes('via.placeholder.com') ? "/images/default-thumbnail.jpeg" : (campaign.thumbnail_url || "/images/default-thumbnail.jpeg")} 
@@ -463,6 +477,162 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
           </div>
         )}
       </div>
+
+      {/* Campaign Detail Modal */}
+      {isModalOpen && selectedCampaign && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-[#202123] rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-6">
+                <h2 className="text-2xl font-bold text-[#ECECF1]">Campaign Details</h2>
+                <button
+                  onClick={handleCloseModal}
+                  className="text-[#9CA3AF] hover:text-[#ECECF1] text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Left Column - Image and Basic Info */}
+                <div className="space-y-4">
+                  <div className="bg-[#343541] rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-[#ECECF1] mb-3">Campaign Image</h3>
+                    <div className="flex justify-center">
+                      <Image 
+                        src={selectedCampaign.thumbnail_url?.includes('via.placeholder.com') ? "/images/default-thumbnail.jpeg" : (selectedCampaign.thumbnail_url || "/images/default-thumbnail.jpeg")} 
+                        alt={selectedCampaign.marketing_company}
+                        width={300}
+                        height={200}
+                        className="object-cover rounded-lg"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="bg-[#343541] rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-[#ECECF1] mb-3">Basic Information</h3>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-[#9CA3AF]">Campaign ID:</span>
+                        <span className="text-[#ECECF1] ml-2 font-mono">{selectedCampaign.campaign_id}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#9CA3AF]">Date:</span>
+                        <span className="text-[#ECECF1] ml-2">{new Date(selectedCampaign.campaign_observation_date).toLocaleDateString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#9CA3AF]">Company:</span>
+                        <span className="text-[#ECECF1] ml-2 font-medium">{selectedCampaign.marketing_company}</span>
+                      </div>
+                      <div>
+                        <span className="text-[#9CA3AF]">Industry:</span>
+                        <span className="text-[#ECECF1] ml-2">{selectedCampaign.industry}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column - Detailed Information */}
+                <div className="space-y-4">
+                  <div className="bg-[#343541] rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-[#ECECF1] mb-3">Media & Channel</h3>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-[#9CA3AF]">Media Channel:</span>
+                        <div className="flex items-center mt-1">
+                          {getMediaChannelIcon(selectedCampaign.media_channel)}
+                          <span className="text-[#ECECF1] ml-2">{selectedCampaign.media_channel}</span>
+                        </div>
+                      </div>
+                      {selectedCampaign.subindustry && (
+                        <div>
+                          <span className="text-[#9CA3AF]">Subindustry:</span>
+                          <span className="text-[#ECECF1] ml-2">{selectedCampaign.subindustry}</span>
+                        </div>
+                      )}
+                      {selectedCampaign.product_type && (
+                        <div>
+                          <span className="text-[#9CA3AF]">Product Type:</span>
+                          <span className="text-[#ECECF1] ml-2">{selectedCampaign.product_type}</span>
+                        </div>
+                      )}
+                      {selectedCampaign.brand && (
+                        <div>
+                          <span className="text-[#9CA3AF]">Brand:</span>
+                          <span className="text-[#ECECF1] ml-2">{selectedCampaign.brand}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="bg-[#343541] rounded-lg p-4">
+                    <h3 className="text-lg font-semibold text-[#ECECF1] mb-3">Performance Metrics</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-[#9CA3AF] text-sm">Estimated Volume</span>
+                        <div className="text-[#ECECF1] font-semibold text-lg">
+                          {selectedCampaign.estimated_volume?.toLocaleString() || 'N/A'}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-[#9CA3AF] text-sm">Estimated Spend</span>
+                        <div className="text-[#ECECF1] font-semibold text-lg">
+                          ${selectedCampaign.estimated_spend?.toLocaleString() || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Details */}
+                  {(selectedCampaign.post_link || selectedCampaign.landing_page || selectedCampaign.subject_line) && (
+                    <div className="bg-[#343541] rounded-lg p-4">
+                      <h3 className="text-lg font-semibold text-[#ECECF1] mb-3">Additional Details</h3>
+                      <div className="space-y-2">
+                        {selectedCampaign.post_link && (
+                          <div>
+                            <span className="text-[#9CA3AF]">Post Link:</span>
+                            <a 
+                              href={selectedCampaign.post_link} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-[#10A37F] ml-2 hover:underline"
+                            >
+                              View Post
+                            </a>
+                          </div>
+                        )}
+                        {selectedCampaign.landing_page && (
+                          <div>
+                            <span className="text-[#9CA3AF]">Landing Page:</span>
+                            <a 
+                              href={selectedCampaign.landing_page} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-[#10A37F] ml-2 hover:underline"
+                            >
+                              Visit Page
+                            </a>
+                          </div>
+                        )}
+                        {selectedCampaign.subject_line && (
+                          <div>
+                            <span className="text-[#9CA3AF]">Subject Line:</span>
+                            <div className="text-[#ECECF1] mt-1 p-2 bg-[#2A2A2A] rounded">
+                              {selectedCampaign.subject_line}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

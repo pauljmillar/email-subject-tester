@@ -4,13 +4,11 @@ import { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import SearchView from './components/SearchView';
 import DatabaseViewIntent from './components/DatabaseViewIntent';
-import NewView from './components/NewView';
-import LibraryView from './components/LibraryView';
 import DashboardView from './components/DashboardView';
 import CampaignsView from './components/CampaignsView';
 
 export default function Home() {
-  const [activeView, setActiveView] = useState('search');
+  const [activeView, setActiveView] = useState('campaigns');
   const [initialChatMessage, setInitialChatMessage] = useState<string | null>(null);
   const [originalSubjectLine, setOriginalSubjectLine] = useState<string | null>(null);
 
@@ -25,19 +23,15 @@ export default function Home() {
     switch (activeView) {
       case 'search':
         return <SearchView onViewChange={setActiveView} onSuggestionRequest={handleSuggestionRequest} />;
-              case 'database':
-                return <DatabaseViewIntent 
-                  initialMessage={initialChatMessage} 
-                  originalSubjectLine={originalSubjectLine}
-                  onMessageSent={() => {
-                    setInitialChatMessage(null);
-                    setOriginalSubjectLine(null);
-                  }} 
-                />;
-      case 'new':
-        return <NewView />;
-      case 'library':
-        return <LibraryView />;
+      case 'database':
+        return <DatabaseViewIntent 
+          initialMessage={initialChatMessage} 
+          originalSubjectLine={originalSubjectLine}
+          onMessageSent={() => {
+            setInitialChatMessage(null);
+            setOriginalSubjectLine(null);
+          }} 
+        />;
       case 'dashboard':
         return <DashboardView onViewChange={setActiveView} />;
       case 'campaigns':
