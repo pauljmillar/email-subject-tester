@@ -63,12 +63,63 @@ export async function POST(request: NextRequest) {
           console.log(`Found ${data?.length || 0} similar subject lines`);
           
           if (data && data.length > 0) {
-            contextText = '\n\nHere are some similar subject lines from our database:\n';
-            data.forEach((line: any, index: number) => {
-              contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
-              if (line.company) contextText += `, Company: ${line.company}`;
-              contextText += `, Similarity: ${(line.similarity_score * 100).toFixed(0)}%)\n`;
-            });
+            // Apply company filter if provided
+            let filteredData = data;
+            if (parameters?.company && parameters.company.length > 0) {
+              filteredData = data.filter((line: any) => 
+                parameters.company.includes(line.company)
+              );
+              console.log(`Filtered to ${filteredData.length} results for companies: ${parameters.company.join(', ')}`);
+            }
+            
+            // Apply industry filter if provided
+            if (parameters?.industry && parameters.industry.length > 0) {
+              filteredData = filteredData.filter((line: any) => 
+                parameters.industry.includes(line.sub_industry)
+              );
+              console.log(`Filtered to ${filteredData.length} results for industries: ${parameters.industry.join(', ')}`);
+            }
+            
+            if (filteredData.length > 0) {
+              contextText = '\n\nHere are some similar subject lines from our database:\n';
+              filteredData.forEach((line: any, index: number) => {
+                contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
+                if (line.company) contextText += `, Company: ${line.company}`;
+                contextText += `, Similarity: ${(line.similarity * 100).toFixed(0)}%)\n`;
+              });
+            } else {
+              // Fallback: If vector search + company filter returns no results, try keyword search for the company
+              if (parameters?.company && parameters.company.length > 0) {
+                console.log('No vector results for company, trying keyword search...');
+                try {
+                  const keywordQuery = supabase
+                    .from('subject_lines')
+                    .select('subject_line, open_rate, company, projected_volume')
+                    .in('company', parameters.company)
+                    .ilike('subject_line', `%${subjectLine}%`)
+                    .order('open_rate', { ascending: false })
+                    .limit(5);
+                  
+                  const { data: keywordData, error: keywordError } = await keywordQuery;
+                  
+                  if (!keywordError && keywordData && keywordData.length > 0) {
+                    contextText = '\n\nHere are some subject lines from our database:\n';
+                    keywordData.forEach((line: any, index: number) => {
+                      contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
+                      if (line.company) contextText += `, Company: ${line.company}`;
+                      contextText += `)\n`;
+                    });
+                  } else {
+                    contextText = '\n\nBased on our email marketing database, here are some insights about successful subject lines:\n- High-performing subject lines typically have open rates above 20%\n- Action-oriented language performs better\n- Urgency and personalization increase engagement';
+                  }
+                } catch (keywordError) {
+                  console.error('Keyword search error:', keywordError);
+                  contextText = '\n\nBased on our email marketing database, here are some insights about successful subject lines:\n- High-performing subject lines typically have open rates above 20%\n- Action-oriented language performs better\n- Urgency and personalization increase engagement';
+                }
+              } else {
+                contextText = '\n\nBased on our email marketing database, here are some insights about successful subject lines:\n- High-performing subject lines typically have open rates above 20%\n- Action-oriented language performs better\n- Urgency and personalization increase engagement';
+              }
+            }
           } else {
             contextText = '\n\nBased on our email marketing database, here are some insights about successful subject lines:\n- High-performing subject lines typically have open rates above 20%\n- Action-oriented language performs better\n- Urgency and personalization increase engagement';
           }

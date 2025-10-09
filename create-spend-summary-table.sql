@@ -1,0 +1,101 @@
+-- Create spend_summary table
+CREATE TABLE IF NOT EXISTS spend_summary (
+    id SERIAL PRIMARY KEY,
+    date_coded VARCHAR(50) NOT NULL,
+    chime DECIMAL(15,2),
+    credit_karma DECIMAL(15,2),
+    self_financial DECIMAL(15,2),
+    american_express DECIMAL(15,2),
+    capital_one DECIMAL(15,2),
+    discover DECIMAL(15,2),
+    dave DECIMAL(15,2),
+    earnin DECIMAL(15,2),
+    empower_finance DECIMAL(15,2),
+    moneylion DECIMAL(15,2),
+    ally DECIMAL(15,2),
+    current DECIMAL(15,2),
+    one_finance DECIMAL(15,2),
+    varo DECIMAL(15,2),
+    rocket_money DECIMAL(15,2),
+    sofi DECIMAL(15,2),
+    cashapp DECIMAL(15,2),
+    paypal DECIMAL(15,2),
+    venmo DECIMAL(15,2),
+    bank_of_america DECIMAL(15,2),
+    chase DECIMAL(15,2),
+    wells_fargo DECIMAL(15,2),
+    year VARCHAR(10),
+    grand_total DECIMAL(15,2),
+    category VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_spend_summary_date ON spend_summary(date_coded);
+CREATE INDEX IF NOT EXISTS idx_spend_summary_year ON spend_summary(year);
+CREATE INDEX IF NOT EXISTS idx_spend_summary_category ON spend_summary(category);
+
+-- Insert sample data based on the CSV structure
+INSERT INTO spend_summary (
+    date_coded, chime, credit_karma, self_financial, american_express, capital_one, 
+    discover, dave, earnin, empower_finance, moneylion, ally, current, one_finance, 
+    varo, rocket_money, sofi, cashapp, paypal, venmo, bank_of_america, chase, wells_fargo,
+    year, grand_total, category
+) VALUES 
+(
+    'April 2025',
+    15075539.00,
+    20406351.00,
+    3424113.00,
+    23135540.00,
+    63054262.00,
+    16567132.00,
+    1513277.00,
+    998739.00,
+    2178947.00,
+    43838.00,
+    4719949.00,
+    89918.00,
+    2790.00,
+    1608604.00,
+    18389086.00,
+    16249821.00,
+    4376283.00,
+    28118757.00,
+    3650968.00,
+    11226792.00,
+    38524789.00,
+    23530448.00,
+    '2025',
+    NULL,
+    NULL
+),
+(
+    'March 2025',
+    11158451.00,
+    27080138.00,
+    3275345.00,
+    19391163.00,
+    73567169.00,
+    18136009.00,
+    1054087.00,
+    499777.00,
+    1741532.00,
+    158355.00,
+    4706689.00,
+    109089.00,
+    40875.00,
+    1136921.00,
+    13604859.00,
+    16618174.00,
+    2887054.00,
+    42120877.00,
+    9932223.00,
+    6980214.00,
+    33505456.00,
+    8848388.00,
+    '2025',
+    NULL,
+    NULL
+);

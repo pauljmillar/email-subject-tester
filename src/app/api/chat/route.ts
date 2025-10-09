@@ -1,25 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
-interface ContextSubjectLine {
-  subject_line_id: number;
-  subject_line: string;
-  open_rate: number;
-  similarity_score: number;
-  keyword_score?: number;
-  combined_score?: number;
-  company?: string;
-  sub_industry?: string;
-  mailing_type?: string;
-  read_rate?: number;
-  inbox_rate?: number;
-  date_sent?: string;
-  spam_rate?: number;
-}
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -41,17 +22,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if OpenAI API key is configured
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },
-        { status: 500 }
-      );
-    }
-
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        { error: 'Database not configured' },
         { status: 500 }
       );
     }
@@ -60,15 +33,13 @@ export async function POST(request: NextRequest) {
     const finalContextText = contextText || '';
     console.log('Using contextText length:', finalContextText.length);
 
-    // Context is now provided externally via contextText parameter
-
     // Create the system prompt with context
     let systemPrompt = '';
     
-            if (isInitialRequest) {
-              console.log('Creating INITIAL system prompt');
-              // For initial requests: focus on subject line analysis and improvement
-              systemPrompt = `You are an expert email marketing consultant. 
+    if (isInitialRequest) {
+      console.log('Creating INITIAL system prompt');
+      // For initial requests: focus on subject line analysis and improvement
+      systemPrompt = `You are an expert email marketing consultant. 
 
 1. State the user's original subject line.
 
@@ -82,10 +53,10 @@ The list of subject lines should include their historical open rates, which are 
 3. Think about this list of subject lines and open rates (success rates), and use your knowledge of email marketing to suggest 1 - 2 things that could improve the user's original subject line.
 
 4. End with 3 alternative subject lines to the user's original that should perform better than their current.`;
-            } else {
-              console.log('Creating SUBSEQUENT system prompt');
-              // For subsequent chat messages: general email marketing consultant
-              systemPrompt = `You are an expert email marketing consultant. 
+    } else {
+      console.log('Creating SUBSEQUENT system prompt');
+      // For subsequent chat messages: general email marketing consultant
+      systemPrompt = `You are an expert email marketing consultant. 
 
 - If we have included information here from our database of email marketing campaign performance, it will show up here:
 ${finalContextText}
@@ -94,12 +65,12 @@ You should try to answer the user's request with it.  Print 3-5 rows of the data
 - If no data from our database has been included, reply, "I couldn't find any information about that in our database," then briefly answer the request as best you can.
 
 Either way, reply succinctly and decisively, using short bullet points and a summary sentence.`;
-            }
+    }
     
-            console.log('Final system prompt length:', systemPrompt.length);
-            console.log('=== FINAL SYSTEM PROMPT ===');
-            console.log(systemPrompt);
-            console.log('=== END SYSTEM PROMPT ===');
+    console.log('Final system prompt length:', systemPrompt.length);
+    console.log('=== FINAL SYSTEM PROMPT ===');
+    console.log(systemPrompt);
+    console.log('=== END SYSTEM PROMPT ===');
 
     // Generate AI response
     const completion = await openai.chat.completions.create({

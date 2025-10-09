@@ -26,8 +26,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('subject_lines')
       .select('company')
-      .not('company', 'is', null)
-      .execute();
+      .not('company', 'is', null);
 
     if (error) {
       console.error('Error fetching companies:', error);

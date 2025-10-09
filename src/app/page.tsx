@@ -6,6 +6,8 @@ import SearchView from './components/SearchView';
 import DatabaseViewIntent from './components/DatabaseViewIntent';
 import NewView from './components/NewView';
 import LibraryView from './components/LibraryView';
+import DashboardView from './components/DashboardView';
+import CampaignsView from './components/CampaignsView';
 
 export default function Home() {
   const [activeView, setActiveView] = useState('search');
@@ -36,6 +38,10 @@ export default function Home() {
         return <NewView />;
       case 'library':
         return <LibraryView />;
+      case 'dashboard':
+        return <DashboardView onViewChange={setActiveView} />;
+      case 'campaigns':
+        return <CampaignsView onViewChange={setActiveView} />;
       default:
         return <SearchView onViewChange={setActiveView} onSuggestionRequest={handleSuggestionRequest} />;
     }

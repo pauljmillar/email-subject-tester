@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       // Skip date filtering for now to avoid errors
       // TODO: Implement proper date filtering
 
-      const { data, error } = await query.execute();
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching subject lines:', error);
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
       // Skip date filtering for now to avoid errors
       // TODO: Implement proper date filtering
 
-      const { data, error } = await query.execute();
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching volume data:', error);
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       // Skip date filtering for now to avoid errors
       // TODO: Implement proper date filtering
 
-      const { data, error } = await query.execute();
+      const { data, error } = await query;
 
       if (error) {
         console.error('Error fetching open rates data:', error);

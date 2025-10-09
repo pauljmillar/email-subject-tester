@@ -70,106 +70,6 @@ export default function DatabaseViewIntent({ initialMessage, originalSubjectLine
     ));
   }, []);
 
-  const executeQueries = useCallback(async (intentResponse: any) => {
-    console.log('=== EXECUTING QUERIES ===');
-    console.log('Intent response:', JSON.stringify(intentResponse, null, 2));
-    console.log('Number of facets to process:', intentResponse.facets?.length || 0);
-
-    // Debug: Show intent analysis in a single grouped message
-    if (intentResponse.facets && intentResponse.facets.length > 0) {
-      let debugContent = `**Intent Analysis:**\n${intentResponse.intent}\n\n**Search Conditions:**\n`;
-      intentResponse.facets.forEach((facet: any, index: number) => {
-        const conditions = [];
-        if (facet.parameters?.company?.length > 0) conditions.push(`Company: ${facet.parameters.company.join(', ')}`);
-        if (facet.parameters?.industry?.length > 0) conditions.push(`Industry: ${facet.parameters.industry.join(', ')}`);
-        if (facet.parameters?.timeframe) conditions.push(`Timeframe: ${facet.parameters.timeframe}`);
-        debugContent += `• Facet ${index + 1} (${facet.type}): ${conditions.join(', ')}\n`;
-        if (facet.sql) {
-          debugContent += `  SQL: ${facet.sql}\n`;
-        }
-      });
-      addDebugMessage(debugContent);
-    }
-
-    let contextText = '';
-
-    if (intentResponse.facets && intentResponse.facets.length > 0) {
-      // Execute queries for each facet in parallel
-      const queryPromises = intentResponse.facets.map(async (facet: any, index: number) => {
-        console.log('Executing query for facet:', facet.type);
-        
-                try {
-                  // Use SQL query if available, otherwise fall back to simple query
-                  let response;
-                  if (facet.sql) {
-                    response = await fetch('/api/data/query-sql', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        sql: facet.sql
-                      }),
-                    });
-                  } else {
-                    // Fallback to original query method
-                    response = await fetch('/api/data/query-simple', {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                      },
-                      body: JSON.stringify({
-                        facetType: facet.type,
-                        parameters: facet.parameters,
-                        subjectLine: facet.subject_line || originalSubjectLine
-                      }),
-                    });
-                  }
-
-                  if (response.ok) {
-                    const data = await response.json();
-                    console.log(`Query result for ${facet.type}:`, data);
-                    console.log(`Context text length for ${facet.type}:`, data.contextText?.length || 0);
-                    
-                    return data.contextText || '';
-                  } else {
-                    const errorText = await response.text();
-                    console.error(`Query failed for ${facet.type}:`, errorText);
-                    return '';
-                  }
-                } catch (error) {
-                  console.error(`Error executing query for ${facet.type}:`, error);
-                  return '';
-                }
-      });
-
-      const results = await Promise.all(queryPromises);
-      contextText = results.filter(text => text).join('\n\n');
-      
-      // Debug: Show query results in a single grouped message
-      if (debugMode && results.length > 0) {
-        let debugContent = `**Query Results:**\n`;
-        results.forEach((result, index) => {
-          if (result && result.trim()) {
-            const lines = result.split('\n').filter((line: string) => line.trim().length > 0);
-            const recordCount = lines.filter((line: string) => line.match(/^\d+\./)).length;
-            debugContent += `• Facet ${index + 1}: Found ${recordCount} records\n`;
-            if (lines.length > 0) {
-              debugContent += `  Sample: ${lines[0].trim()}\n`;
-            }
-          } else {
-            debugContent += `• Facet ${index + 1}: No records found\n`;
-          }
-        });
-        addDebugMessage(debugContent);
-      }
-    }
-
-    console.log('Final context text length:', contextText.length);
-    console.log('=== END EXECUTING QUERIES ===');
-    
-    return contextText;
-  }, [originalSubjectLine, addDebugMessage]);
 
   const sendMessageToAI = useCallback(async (messageContent: string, isInitialRequest: boolean = false) => {
     if (!messageContent || isLoading) return;
@@ -184,7 +84,7 @@ export default function DatabaseViewIntent({ initialMessage, originalSubjectLine
     try {
       // Step 1: Analyze intent
       console.log('Step 1: Analyzing intent...');
-      const intentResponse = await fetch('/api/chat/intent-simple', {
+              const intentResponse = await fetch('/api/chat/intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -202,9 +102,51 @@ export default function DatabaseViewIntent({ initialMessage, originalSubjectLine
       const intentData = await intentResponse.json();
       console.log('Intent analysis result:', intentData);
 
-      // Step 2: Execute queries based on intent
-      console.log('Step 2: Executing queries...');
-      let contextText = await executeQueries(intentData);
+      // Step 2: Gather data using the new gather API
+      console.log('Step 2: Gathering data...');
+      
+      // Debug: Show intent analysis
+      if (intentData.facets && intentData.facets.length > 0) {
+        let debugContent = `**Intent Analysis:**\n${intentData.intent}\n\n**Search Conditions:**\n`;
+        intentData.facets.forEach((facet: any, index: number) => {
+          const conditions = [];
+          if (facet.parameters?.company?.length > 0) conditions.push(`Company: ${facet.parameters.company.join(', ')}`);
+          if (facet.parameters?.industry?.length > 0) conditions.push(`Industry: ${facet.parameters.industry.join(', ')}`);
+          if (facet.parameters?.timeframe) conditions.push(`Timeframe: ${facet.parameters.timeframe}`);
+          debugContent += `• Facet ${index + 1} (${facet.type}): ${conditions.join(', ')}\n`;
+          if (facet.sql) {
+            debugContent += `  SQL: ${facet.sql}\n`;
+          }
+        });
+        addDebugMessage(debugContent);
+      }
+      
+      const gatherResponse = await fetch('/api/chat/gather', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          intentResponse: intentData,
+          originalSubjectLine: originalSubjectLine
+        }),
+      });
+
+      if (!gatherResponse.ok) {
+        throw new Error('Data gathering failed');
+      }
+
+      const gatherData = await gatherResponse.json();
+      let contextText = gatherData.contextText || '';
+      
+      // Debug: Show gather results
+      if (debugMode) {
+        let debugContent = `**Data Gathering Results:**\n`;
+        debugContent += `• Facets processed: ${gatherData.facetCount || 0}\n`;
+        debugContent += `• Successful queries: ${gatherData.successCount || 0}\n`;
+        debugContent += `• Context length: ${contextText.length} characters\n`;
+        addDebugMessage(debugContent);
+      }
       
       // Fallback if no context is found
       if (!contextText || contextText.trim().length === 0) {
@@ -272,7 +214,7 @@ export default function DatabaseViewIntent({ initialMessage, originalSubjectLine
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, originalSubjectLine, typewriterEffect, executeQueries]);
+  }, [isLoading, originalSubjectLine, typewriterEffect, addDebugMessage, debugMode]);
 
   const handleSubmit = async (e: React.FormEvent, messageContent?: string) => {
     e.preventDefault();

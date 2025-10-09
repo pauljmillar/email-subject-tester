@@ -26,8 +26,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('subject_lines')
       .select('sub_industry')
-      .not('sub_industry', 'is', null)
-      .execute();
+      .not('sub_industry', 'is', null);
 
     if (error) {
       console.error('Error fetching industries:', error);

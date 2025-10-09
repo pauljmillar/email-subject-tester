@@ -1,48 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error('Missing Supabase environment variables');
-}
-
-const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
-  : null;
-
-interface IntentResponse {
-  intent: string;
-  facets: Array<{
-    type: 'subject_line' | 'volume' | 'open_rates';
-    parameters: {
-      company?: string[];
-      industry?: string[];
-      timeframe?: string;
-    };
-    subject_line?: string;
-    vector_search?: {
-      query_embedding: number[];
-      similarity_threshold: number;
-      max_results: number;
-    };
-  }>;
-}
 
 export async function POST(request: NextRequest) {
   try {
     const { userPrompt, originalSubjectLine } = await request.json();
     
-    console.log('=== INTENT API DEBUG ===');
+    console.log('=== SIMPLE INTENT API DEBUG ===');
     console.log('userPrompt:', userPrompt);
     console.log('originalSubjectLine:', originalSubjectLine);
-    console.log('Available companies count:', availableCompanies.length);
-    console.log('Available industries count:', availableIndustries.length);
 
     if (!userPrompt) {
       return NextResponse.json(
@@ -58,93 +27,99 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!supabase) {
-      return NextResponse.json(
-        { error: 'Database not configured' },
-        { status: 500 }
-      );
-    }
-
-    // Get available companies and industries for context
-    let availableCompanies: string[] = [];
-    let availableIndustries: string[] = [];
-
-    if (supabase) {
-      try {
-        console.log('Fetching companies and industries from database...');
-        
-        // Get companies from database
-        const companiesResult = await supabase
-          .from('subject_lines')
-          .select('company')
-          .not('company', 'is', null)
-          .limit(100)
-          .execute();
-        
-        availableCompanies = [...new Set(companiesResult.data?.map(row => row.company) || [])];
-
-        // Get industries from database
-        const industriesResult = await supabase
-          .from('subject_lines')
-          .select('sub_industry')
-          .not('sub_industry', 'is', null)
-          .limit(100)
-          .execute();
-        
-        availableIndustries = [...new Set(industriesResult.data?.map(row => row.sub_industry) || [])];
-
-        console.log('Available companies:', availableCompanies.slice(0, 10));
-        console.log('Available industries:', availableIndustries.slice(0, 10));
-      } catch (error) {
-        console.error('Error fetching companies/industries:', error);
-        // Continue without this context
-      }
-    } else {
-      console.log('Supabase not available, skipping database context');
-    }
-
-    // Create intent analysis prompt
-    const intentPrompt = `You are an intent analysis system for an email marketing database. Analyze the user's request and determine what data would be most helpful.
-
-Available companies: ${availableCompanies.slice(0, 20).join(', ')}
-Available industries: ${availableIndustries.slice(0, 20).join(', ')}
+            // Simple intent analysis without database context
+            const currentDate = new Date().toISOString().split('T')[0];
+            const intentPrompt = `Analyze this user request and determine what data would be most helpful:
 
 User request: "${userPrompt}"
-${originalSubjectLine ? `Original subject line being analyzed: "${originalSubjectLine}"` : ''}
+${originalSubjectLine ? `Original subject line: "${originalSubjectLine}"` : ''}
 
-Return a JSON response with this EXACT structure:
+Current date context: Today is ${currentDate}. The database contains email data primarily from 2025 (July-October 2025). When generating date ranges, use 2025 dates instead of 2024.
+
+Database Schema:
+Table: subject_lines
+- id (int): Primary key
+- subject_line (text): The email subject line text
+- company (text): Company name (e.g., "Capital One", "Chase", "American Express")
+- sub_industry (text): Industry category (e.g., "Financial Services - Banking", "Financial Services - Credit Cards")
+- open_rate (float): Open rate as decimal (0.0 to 1.0)
+- projected_volume (int): Email volume/send size
+- date_sent (date): When the email was sent
+- created_at (timestamp): Record creation time
+- mailing_type (text): Type of mailing (e.g., "Acquisition", "Retention")
+- inbox_rate (float): Inbox delivery rate
+- spam_rate (float): Spam rate
+- read_rate (float): Read rate
+- read_delete_rate (float): Read and delete rate
+- delete_without_read_rate (float): Delete without read rate
+
+Sample rows:
+1. id: 3644, subject_line: "A federal holiday is coming up", company: "Capital One", sub_industry: "Financial Services - Banking", open_rate: 0.3004, projected_volume: 10681779, date_sent: "2025-08-11", mailing_type: "Acquisition"
+2. id: 3645, subject_line: "As the seasons change, so do fraud tactics", company: "Capital One", sub_industry: "Financial Services - Banking", open_rate: 0.254, projected_volume: 10147179, date_sent: "2025-08-12", mailing_type: "Acquisition"
+
+Table: subject_line_embeddings  
+- subject_line_id (int): Foreign key to subject_lines.id
+- embedding (vector): 1536-dimensional vector embedding for similarity search
+
+Return JSON with this EXACT structure:
 {
   "intent": "Clear description of what the user is trying to determine",
   "facets": [
     {
       "type": "subject_line|volume|open_rates",
       "parameters": {
-        "company": ["Company1", "Company2"],
-        "industry": ["Industry1", "Industry2"], 
-        "timeframe": "recent|last 3 months|this year|etc"
+        "company": [],
+        "industry": [],
+        "timeframe": "recent|last 3 months|this year"
       },
       "subject_line": "actual subject line here",
-      "vector_search": {
-        "query_embedding": "will be generated",
-        "similarity_threshold": 0.7,
-        "max_results": 10
-      }
+      "sql": "SQL statement to run in postgres for this specific facet"
     }
   ]
 }
 
 Facet types:
-- "subject_line": For similar subject lines, subject line analysis, examples
+- "subject_line": For subject line analysis, examples, and searches
 - "volume": For email volume, largest campaigns, biggest sends, high-volume campaigns  
 - "open_rates": For successful campaigns, popular messages, good subject lines, engaged emails
+
+CRITICAL: For subject_line facets, determine the search method based on the user's request:
+
+VECTOR SEARCH (use subject_line parameter, NO SQL):
+- User asks about subject line CONTENT/CONTEXT: "announce APR", "welcome emails", "engaging subject lines", "about fraud", "regarding rewards"
+- User asks for similar subject lines: "like this one", "similar to", "examples of"
+- User asks about subject line themes: "holiday emails", "promotional subject lines", "security alerts"
+- When using VECTOR SEARCH: Set subject_line parameter with the content/context keywords, leave sql as empty string ""
+
+SQL SEARCH (generate SQL, NO subject_line parameter):
+- User asks for subject line FILTERING/LISTING: "from Chase", "sent by Capital One", "recent subject lines", "last month", "all subject lines"
+- User asks for subject line statistics: "how many subject lines", "count of emails", "list of campaigns"
+- When using SQL SEARCH: Leave subject_line as empty string "", generate appropriate SQL query
+
+Examples:
+- "Find good subject lines that announce APR" → VECTOR search with subject_line="announce APR"
+- "Show me subject lines from Chase" → SQL search with company filter
+- "Welcome emails from last month" → VECTOR search with subject_line="welcome emails" + date filter
+- "All subject lines sent by Capital One" → SQL search with company filter
+- "Find good subject lines from Credit Karma that announce APR" → VECTOR search with subject_line="announce APR" + company=["Credit Karma"]
+- "Engaging subject lines from Chase about rewards" → VECTOR search with subject_line="rewards" + company=["Chase"]
+
+IMPORTANT: For VECTOR SEARCH with company filters, include the company in parameters AND set subject_line for content search.
+
+IMPORTANT: For comparison questions (e.g., "Did X send more emails in July or August?", "Compare X vs Y", "Which month had higher volume?"), create SEPARATE facets for each comparison point:
+- One facet for July data
+- One facet for August data
+- One facet for Company A vs Company B
+- etc.
+
+This allows the system to retrieve data for each comparison point separately and provide accurate comparisons.
 
 Only include facets that are relevant. If no facets are needed, return {"intent": "...", "facets": []}.
 
 Return ONLY valid JSON, no other text.`;
 
-    console.log('Analyzing intent with OpenAI...');
+    console.log('Sending to OpenAI...');
 
-    // Get intent analysis from OpenAI
     const completion = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
@@ -156,29 +131,26 @@ Return ONLY valid JSON, no other text.`;
     });
 
     const intentResponseText = completion.choices[0]?.message?.content || '{}';
-    console.log('Raw intent response from OpenAI:', intentResponseText);
-    console.log('Response length:', intentResponseText.length);
+    console.log('OpenAI response:', intentResponseText);
 
-    let intentResponse: IntentResponse;
+    let intentResponse;
     try {
       intentResponse = JSON.parse(intentResponseText);
     } catch (error) {
-      console.error('Error parsing intent response:', error);
-      // Fallback response
+      console.error('JSON parse error:', error);
       intentResponse = {
         intent: "User is asking about email marketing",
         facets: []
       };
     }
 
-    console.log('Parsed intent response:', JSON.stringify(intentResponse, null, 2));
-    console.log('Number of facets:', intentResponse.facets?.length || 0);
-    console.log('=== END INTENT API DEBUG ===');
+    console.log('Final intent response:', JSON.stringify(intentResponse, null, 2));
+    console.log('=== END SIMPLE INTENT API DEBUG ===');
 
     return NextResponse.json(intentResponse);
 
   } catch (error) {
-    console.error('Intent API error:', error);
+    console.error('Simple Intent API error:', error);
     return NextResponse.json(
       { error: 'Failed to analyze intent' },
       { status: 500 }
