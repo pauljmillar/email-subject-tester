@@ -171,8 +171,8 @@ export async function POST(request: NextRequest) {
                 console.log(`Keyword search found ${keywordData.length} additional results`);
                 // Combine vector and keyword results, removing duplicates
                 const combinedData = [...data];
-                keywordData.forEach((keywordResult: any) => {
-                  if (!combinedData.some((vectorResult: any) => 
+                keywordData.forEach((keywordResult: Record<string, unknown>) => {
+                  if (!combinedData.some((vectorResult: Record<string, unknown>) => 
                     vectorResult.subject_line === keywordResult.subject_line
                   )) {
                     combinedData.push(keywordResult);
@@ -226,7 +226,7 @@ export async function POST(request: NextRequest) {
               
               let hasMatchingCompany = false;
               if (company_filter && company_filter.length > 0) {
-                hasMatchingCompany = data.some((row: any) => {
+                hasMatchingCompany = data.some((row: Record<string, unknown>) => {
                   const resultData = row.result || row;
                   return company_filter.includes(resultData.company);
                 });
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
                 contextText = '\n\nHere are the results from our database:\n';
               }
               
-              data.forEach((row: any, index: number) => {
+              data.forEach((row: Record<string, unknown>, index: number) => {
                 contextText += `${index + 1}. `;
                 
                 // Handle different result formats

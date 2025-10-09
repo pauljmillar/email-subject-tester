@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
+// import OpenAI from 'openai';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+    // const openai = new OpenAI({
+    //   apiKey: process.env.OPENAI_API_KEY,
+    // });
 
 if (!supabaseUrl || !supabaseKey) {
   console.error('Missing Supabase environment variables');
@@ -32,19 +32,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let results: any[] = [];
+    let results: Record<string, unknown>[] = [];
     let contextText = '';
 
     if (facetType === 'subject_line' && subjectLine) {
       console.log('Processing subject_line facet with vector search...');
       
       // Generate embedding for the subject line
-      const embeddingResponse = await openai.embeddings.create({
-        model: 'text-embedding-ada-002',
-        input: subjectLine,
-      });
+      // const embeddingResponse = await openai.embeddings.create({
+      //   model: 'text-embedding-ada-002',
+      //   input: subjectLine,
+      // });
 
-      const queryEmbedding = embeddingResponse.data[0].embedding;
+      // const queryEmbedding = embeddingResponse.data[0].embedding;
 
       // Build query with filters
       let query = supabase

@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 
 interface Campaign {
   id: number;
@@ -48,7 +49,7 @@ interface CampaignsViewProps {
 type SortField = 'campaign_id' | 'campaign_observation_date' | 'media_channel' | 'marketing_company' | 'industry' | 'estimated_volume' | 'estimated_spend';
 type SortDirection = 'asc' | 'desc';
 
-export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
+export default function CampaignsView({ onViewChange: _onViewChange }: CampaignsViewProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,7 +66,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
     marketingCompanies: [] as string[]
   });
 
-  const fetchCampaigns = async () => {
+  const fetchCampaigns = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -94,11 +95,11 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, itemsPerPage, searchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection]);
 
   useEffect(() => {
     fetchCampaigns();
-  }, [currentPage, searchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection]);
+  }, [fetchCampaigns]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -276,10 +277,12 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
                 {campaigns.map((campaign) => (
                   <tr key={campaign.id} className="hover:bg-[#2A2A2A]">
                     <td className="px-4 py-4">
-                      <img 
+                      <Image 
                         src={campaign.thumbnail_url} 
                         alt={campaign.marketing_company}
-                        className="w-16 h-10 object-cover rounded"
+                        width={64}
+                        height={40}
+                        className="object-cover rounded"
                       />
                     </td>
                     <td className="px-4 py-4 text-sm text-[#ECECF1] font-mono">

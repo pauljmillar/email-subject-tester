@@ -108,7 +108,7 @@ export default function DatabaseViewIntent({ initialMessage, originalSubjectLine
       // Debug: Show intent analysis
       if (intentData.facets && intentData.facets.length > 0) {
         let debugContent = `**Intent Analysis:**\n${intentData.intent}\n\n**Search Conditions:**\n`;
-        intentData.facets.forEach((facet: any, index: number) => {
+        intentData.facets.forEach((facet: Record<string, unknown>, index: number) => {
           const conditions = [];
           if (facet.parameters?.company?.length > 0) conditions.push(`Company: ${facet.parameters.company.join(', ')}`);
           if (facet.parameters?.industry?.length > 0) conditions.push(`Industry: ${facet.parameters.industry.join(', ')}`);

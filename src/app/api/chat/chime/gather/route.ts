@@ -18,14 +18,14 @@ interface IntentFacet {
   sql?: string;
 }
 
-interface IntentResponse {
-  intent: string;
-  facets: IntentFacet[];
-}
+// interface IntentResponse {
+//   intent: string;
+//   facets: IntentFacet[];
+// }
 
 export async function POST(request: NextRequest) {
   try {
-    const { intentResponse, selectedCharts } = await request.json();
+    const { intentResponse } = await request.json();
     
     console.log('=== CHIME GATHER API DEBUG ===');
     console.log('Intent response:', JSON.stringify(intentResponse, null, 2));
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
           
           if (facet.type === 'spend_analysis') {
             // Show only the companies that were actually queried
-            data.forEach((row: any, idx: number) => {
+            data.forEach((row: Record<string, unknown>, idx: number) => {
               facetContext += `${idx + 1}. `;
               if (row.date_coded) facetContext += `Date: ${row.date_coded}`;
               
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
               facetContext += `\n`;
             });
           } else if (facet.type === 'company_comparison') {
-            data.forEach((row: any, idx: number) => {
+            data.forEach((row: Record<string, unknown>, idx: number) => {
               facetContext += `${idx + 1}. `;
               if (row.date_coded) facetContext += `Date: ${row.date_coded}`;
               Object.keys(row).forEach(key => {
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
               facetContext += `\n`;
             });
           } else if (facet.type === 'trend_analysis') {
-            data.forEach((row: any, idx: number) => {
+            data.forEach((row: Record<string, unknown>, idx: number) => {
               facetContext += `${idx + 1}. `;
               if (row.date_coded) facetContext += `Date: ${row.date_coded}`;
               if (row.chime) facetContext += `, Chime: $${(row.chime / 1000000).toFixed(1)}M`;
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
               facetContext += `\n`;
             });
           } else if (facet.type === 'volume_analysis') {
-            data.forEach((row: any, idx: number) => {
+            data.forEach((row: Record<string, unknown>, idx: number) => {
               facetContext += `${idx + 1}. `;
               if (row.date_coded) facetContext += `Date: ${row.date_coded}`;
               if (row.grand_total) facetContext += `, Total Spend: $${(row.grand_total / 1000000).toFixed(1)}M`;

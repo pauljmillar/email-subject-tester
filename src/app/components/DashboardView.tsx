@@ -10,7 +10,7 @@ interface DashboardViewProps {
   onViewChange: (view: string) => void;
 }
 
-export default function DashboardView({ onViewChange }: DashboardViewProps) {
+export default function DashboardView({ onViewChange: _onViewChange }: DashboardViewProps) {
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -112,7 +112,7 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
     }
   };
 
-  const [spendData, setSpendData] = useState<any[]>([]);
+  const [spendData, setSpendData] = useState<Array<{ name: string; data: number[] }>>([]);
   const [months, setMonths] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCharts, setSelectedCharts] = useState<Set<string>>(new Set());
@@ -154,7 +154,7 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
   };
 
   // Create chart configurations for different charts
-  const createChartConfig = (series: any[], title: string) => {
+  const createChartConfig = (series: Array<{ name: string; data: number[] }>) => {
     return {
       type: "line" as const,
       height: 400,

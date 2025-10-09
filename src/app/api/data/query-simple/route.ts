@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         console.log('Searching for similar subject lines to:', subjectLine);
         
         // Generate embedding for the subject line
-        const OpenAI = require('openai');
+        const OpenAI = (await import('openai')).default;
         const openai = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY,
         });
@@ -66,23 +66,23 @@ export async function POST(request: NextRequest) {
             // Apply company filter if provided
             let filteredData = data;
             if (parameters?.company && parameters.company.length > 0) {
-              filteredData = data.filter((line: any) => 
-                parameters.company.includes(line.company)
+              filteredData = data.filter((line: Record<string, unknown>) => 
+                parameters.company.includes(line.company as string)
               );
               console.log(`Filtered to ${filteredData.length} results for companies: ${parameters.company.join(', ')}`);
             }
             
             // Apply industry filter if provided
             if (parameters?.industry && parameters.industry.length > 0) {
-              filteredData = filteredData.filter((line: any) => 
-                parameters.industry.includes(line.sub_industry)
+              filteredData = filteredData.filter((line: Record<string, unknown>) => 
+                parameters.industry.includes(line.sub_industry as string)
               );
               console.log(`Filtered to ${filteredData.length} results for industries: ${parameters.industry.join(', ')}`);
             }
             
             if (filteredData.length > 0) {
               contextText = '\n\nHere are some similar subject lines from our database:\n';
-              filteredData.forEach((line: any, index: number) => {
+              filteredData.forEach((line: Record<string, unknown>, index: number) => {
                 contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
                 if (line.company) contextText += `, Company: ${line.company}`;
                 contextText += `, Similarity: ${(line.similarity * 100).toFixed(0)}%)\n`;
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
                   
                   if (!keywordError && keywordData && keywordData.length > 0) {
                     contextText = '\n\nHere are some subject lines from our database:\n';
-                    keywordData.forEach((line: any, index: number) => {
+                    keywordData.forEach((line: Record<string, unknown>, index: number) => {
                       contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
                       if (line.company) contextText += `, Company: ${line.company}`;
                       contextText += `)\n`;
