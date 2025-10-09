@@ -76,11 +76,14 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchCampaigns = useCallback(async (showRefreshing = false) => {
-    if (showRefreshing) {
-      setIsRefreshing(true);
-    } else {
+  const fetchCampaigns = useCallback(async () => {
+    // Determine if this is an initial load or an update
+    const isInitialLoad = campaigns.length === 0;
+    
+    if (isInitialLoad) {
       setLoading(true);
+    } else {
+      setIsRefreshing(true);
     }
     
     try {
@@ -111,12 +114,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [currentPage, itemsPerPage, debouncedSearchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection]);
-
-  // Initial load
-  useEffect(() => {
-    fetchCampaigns();
-  }, [fetchCampaigns]);
+  }, [currentPage, itemsPerPage, debouncedSearchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection, campaigns.length]);
 
   // Debounce search input
   useEffect(() => {
@@ -135,12 +133,10 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
     };
   }, [searchTerm]);
 
-  // Handle updates when filters/sort change
+  // Handle all data fetching - initial load and updates
   useEffect(() => {
-    if (!loading) {
-      fetchCampaigns(true); // Use refreshing state for updates
-    }
-  }, [currentPage, debouncedSearchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection, fetchCampaigns, loading]);
+    fetchCampaigns();
+  }, [fetchCampaigns]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
