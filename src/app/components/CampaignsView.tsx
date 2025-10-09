@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 
 interface Campaign {
@@ -68,6 +68,10 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
     marketingCompanies: [] as string[]
   });
 
+  // Debounce search input
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+
   const fetchCampaigns = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) {
       setIsRefreshing(true);
@@ -79,7 +83,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: itemsPerPage.toString(),
-        search: searchTerm,
+        search: debouncedSearchTerm,
         mediaChannel: mediaChannelFilter,
         marketingCompany: marketingCompanyFilter,
         sortField: sortField,
@@ -103,11 +107,36 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
       setLoading(false);
       setIsRefreshing(false);
     }
-  }, [currentPage, itemsPerPage, searchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection]);
+  }, [currentPage, itemsPerPage, debouncedSearchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection]);
 
+  // Initial load
   useEffect(() => {
     fetchCampaigns();
-  }, [fetchCampaigns]);
+  }, []);
+
+  // Debounce search input
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchTerm]);
+
+  // Handle updates when filters/sort change
+  useEffect(() => {
+    if (!loading) {
+      fetchCampaigns(true); // Use refreshing state for updates
+    }
+  }, [currentPage, debouncedSearchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -116,6 +145,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
       setSortField(field);
       setSortDirection('asc');
     }
+    setCurrentPage(1); // Reset to first page when sorting
   };
 
   const handleSearch = (value: string) => {
@@ -131,6 +161,10 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
   const handleMarketingCompanyFilter = (value: string) => {
     setMarketingCompanyFilter(value);
     setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -286,8 +320,11 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="rounded-lg overflow-hidden relative">
+          {isRefreshing && (
+            <div className="absolute top-0 left-0 right-0 h-1 bg-[#10A37F] animate-pulse z-10"></div>
+          )}
+          <div className={`overflow-x-auto transition-opacity duration-200 ${isRefreshing ? 'opacity-75' : 'opacity-100'}`}>
             <table className="w-full">
               <thead>
                 <tr>
@@ -409,15 +446,15 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
             </div>
             <div className="flex space-x-2">
               <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
+                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1 || isRefreshing}
                 className="px-3 py-2 bg-[#343541] text-[#ECECF1] rounded-lg hover:bg-[#4A4A4A] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Previous
               </button>
               <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
+                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || isRefreshing}
                 className="px-3 py-2 bg-[#343541] text-[#ECECF1] rounded-lg hover:bg-[#4A4A4A] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
