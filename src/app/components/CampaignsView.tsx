@@ -263,7 +263,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
   return (
     <div className="min-h-screen bg-[#202123] p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-[#ECECF1] mb-6">Marketing Campaigns</h1>
+        <h1 className="text-3xl font-bold text-[#ECECF1] mb-6">Chime - Competitive Set Campaigns</h1>
         
         {/* Filters and Search */}
         <div className="rounded-lg p-4 mb-6">

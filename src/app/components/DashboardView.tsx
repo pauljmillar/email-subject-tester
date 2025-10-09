@@ -292,7 +292,7 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
       {/* Left side - Chat (1/3 of screen) */}
       <div className="w-1/3 border-r border-[#343541] flex flex-col">
         <div className="p-4 border-b border-[#343541]">
-          <h2 className="text-lg font-semibold text-[#ECECF1]">Dashboard Chat</h2>
+          <h2 className="text-lg font-semibold text-[#ECECF1]">Chime Chat</h2>
         </div>
         
         {/* Chat History */}
@@ -327,6 +327,33 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
           )}
         </div>
         
+        {/* Preset Request Bubbles */}
+        {chatHistory.length === 0 && (
+          <div className="px-4 pb-4">
+            <div className="text-sm text-[#9CA3AF] mb-3">Try asking:</div>
+            <div className="space-y-2">
+              <button
+                onClick={() => setChatMessage("Explain what's happening in this chart")}
+                className="w-full text-left px-3 py-2 bg-[#343541] hover:bg-[#4A4A4A] border border-[#4A4A4A] rounded-lg text-[#ECECF1] text-sm transition-colors"
+              >
+                Explain what's happening in this chart
+              </button>
+              <button
+                onClick={() => setChatMessage("Examine the trend in this chart in Jan - Feb 2025")}
+                className="w-full text-left px-3 py-2 bg-[#343541] hover:bg-[#4A4A4A] border border-[#4A4A4A] rounded-lg text-[#ECECF1] text-sm transition-colors"
+              >
+                Examine the trend in this chart in Jan - Feb 2025
+              </button>
+              <button
+                onClick={() => setChatMessage("Compare spend for each company for the latest month, YoY")}
+                className="w-full text-left px-3 py-2 bg-[#343541] hover:bg-[#4A4A4A] border border-[#4A4A4A] rounded-lg text-[#ECECF1] text-sm transition-colors"
+              >
+                Compare spend for each company for the latest month, YoY
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* Chat Input */}
         <div className="p-4 border-t border-[#343541]">
           <div className="flex space-x-2">
@@ -351,7 +378,6 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
       {/* Right side - Charts (2/3 of screen) */}
       <div className="flex-1 p-6 overflow-y-auto">
         <div className="space-y-6">
-          <h1 className="text-2xl font-bold text-[#ECECF1] mb-6">Analytics Dashboard</h1>
           
           {loading ? (
             <div className="flex items-center justify-center h-64">
