@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
             if (filteredData.length > 0) {
               contextText = '\n\nHere are some similar subject lines from our database:\n';
               filteredData.forEach((line: Record<string, unknown>, index: number) => {
-                contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
+                contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${typeof line.open_rate === 'number' ? (line.open_rate * 100).toFixed(1) : 'N/A'}%`;
                 if (line.company) contextText += `, Company: ${line.company}`;
-                contextText += `, Similarity: ${(line.similarity * 100).toFixed(0)}%)\n`;
+                contextText += `, Similarity: ${typeof line.similarity === 'number' ? (line.similarity * 100).toFixed(0) : 'N/A'}%)\n`;
               });
             } else {
               // Fallback: If vector search + company filter returns no results, try keyword search for the company
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
                   if (!keywordError && keywordData && keywordData.length > 0) {
                     contextText = '\n\nHere are some subject lines from our database:\n';
                     keywordData.forEach((line: Record<string, unknown>, index: number) => {
-                      contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
+                      contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${typeof line.open_rate === 'number' ? (line.open_rate * 100).toFixed(1) : 'N/A'}%`;
                       if (line.company) contextText += `, Company: ${line.company}`;
                       contextText += `)\n`;
                     });

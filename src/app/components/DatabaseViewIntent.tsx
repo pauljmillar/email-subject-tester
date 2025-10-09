@@ -110,12 +110,19 @@ export default function DatabaseViewIntent({ initialMessage, originalSubjectLine
         let debugContent = `**Intent Analysis:**\n${intentData.intent}\n\n**Search Conditions:**\n`;
         intentData.facets.forEach((facet: Record<string, unknown>, index: number) => {
           const conditions = [];
-          if (facet.parameters?.company?.length > 0) conditions.push(`Company: ${facet.parameters.company.join(', ')}`);
-          if (facet.parameters?.industry?.length > 0) conditions.push(`Industry: ${facet.parameters.industry.join(', ')}`);
-          if (facet.parameters?.timeframe) conditions.push(`Timeframe: ${facet.parameters.timeframe}`);
-          debugContent += `• Facet ${index + 1} (${facet.type}): ${conditions.join(', ')}\n`;
-          if (facet.sql) {
-            debugContent += `  SQL: ${facet.sql}\n`;
+          const parameters = facet['parameters'] as Record<string, unknown> | undefined;
+          if (parameters?.['company'] && Array.isArray(parameters['company']) && parameters['company'].length > 0) {
+            conditions.push(`Company: ${(parameters['company'] as string[]).join(', ')}`);
+          }
+          if (parameters?.['industry'] && Array.isArray(parameters['industry']) && parameters['industry'].length > 0) {
+            conditions.push(`Industry: ${(parameters['industry'] as string[]).join(', ')}`);
+          }
+          if (parameters?.['timeframe']) {
+            conditions.push(`Timeframe: ${parameters['timeframe'] as string}`);
+          }
+          debugContent += `• Facet ${index + 1} (${facet['type'] as string}): ${conditions.join(', ')}\n`;
+          if (facet['sql']) {
+            debugContent += `  SQL: ${facet['sql'] as string}\n`;
           }
         });
         addDebugMessage(debugContent);

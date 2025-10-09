@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       if (results.length > 0) {
         contextText = '\n\nHere are some similar subject lines from our database:\n';
         results.forEach((line, index) => {
-          contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
+          contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${typeof line.open_rate === 'number' ? (line.open_rate * 100).toFixed(1) : 'N/A'}%`;
           if (line.company) contextText += `, Company: ${line.company}`;
           if (line.sub_industry) contextText += `, Industry: ${line.sub_industry}`;
           contextText += ')\n';
@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
       if (results.length > 0) {
         contextText = '\n\nHere are some high-performing subject lines from our database:\n';
         results.forEach((line, index) => {
-          contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${(line.open_rate * 100).toFixed(1)}%`;
+          contextText += `${index + 1}. "${line.subject_line}" (Open Rate: ${typeof line.open_rate === 'number' ? (line.open_rate * 100).toFixed(1) : 'N/A'}%`;
           if (line.company) contextText += `, Company: ${line.company}`;
           if (line.sub_industry) contextText += `, Industry: ${line.sub_industry}`;
           contextText += ')\n';

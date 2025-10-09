@@ -227,8 +227,8 @@ export async function POST(request: NextRequest) {
               let hasMatchingCompany = false;
               if (company_filter && company_filter.length > 0) {
                 hasMatchingCompany = data.some((row: Record<string, unknown>) => {
-                  const resultData = row.result || row;
-                  return company_filter.includes(resultData.company);
+                  const resultData = (row.result || row) as Record<string, unknown>;
+                  return company_filter.includes(resultData.company as string);
                 });
               }
               
@@ -242,10 +242,10 @@ export async function POST(request: NextRequest) {
                 contextText += `${index + 1}. `;
                 
                 // Handle different result formats
-                let resultData;
+                let resultData: Record<string, unknown>;
                 if (row.result) {
                   // JSONB format from regular SQL
-                  resultData = row.result;
+                  resultData = row.result as Record<string, unknown>;
                 } else if (row.subject_line) {
                   // Direct format from vector search
                   resultData = row;
@@ -257,20 +257,22 @@ export async function POST(request: NextRequest) {
                 console.log(`Formatting row ${index + 1}:`, resultData);
                 
                 // Format based on available fields
-                if (resultData.subject_line) {
-                  contextText += `"${resultData.subject_line}"`;
-                  if (resultData.open_rate) contextText += ` (Open Rate: ${(resultData.open_rate * 100).toFixed(1)}%)`;
-                  if (resultData.company) contextText += `, Company: ${resultData.company}`;
-                  if (resultData.projected_volume) contextText += `, Volume: ${resultData.projected_volume.toLocaleString()}`;
-                  if (resultData.date_sent) contextText += `, Date: ${resultData.date_sent}`;
-                  if (resultData.similarity) contextText += `, Similarity: ${(resultData.similarity * 100).toFixed(1)}%`;
-                } else if (resultData.company && resultData.projected_volume) {
-                  contextText += `Company: ${resultData.company}, Volume: ${resultData.projected_volume.toLocaleString()}`;
-                } else if (resultData.month && resultData.total_volume) {
+                if (resultData['subject_line']) {
+                  contextText += `"${resultData['subject_line'] as string}"`;
+                  if (resultData['open_rate'] && typeof resultData['open_rate'] === 'number') contextText += ` (Open Rate: ${(resultData['open_rate'] * 100).toFixed(1)}%)`;
+                  if (resultData['company']) contextText += `, Company: ${resultData['company'] as string}`;
+                  if (resultData['projected_volume'] && typeof resultData['projected_volume'] === 'number') contextText += `, Volume: ${resultData['projected_volume'].toLocaleString()}`;
+                  if (resultData['date_sent']) contextText += `, Date: ${resultData['date_sent'] as string}`;
+                  if (resultData['similarity'] && typeof resultData['similarity'] === 'number') contextText += `, Similarity: ${(resultData['similarity'] * 100).toFixed(1)}%`;
+                } else if (resultData['company'] && resultData['projected_volume']) {
+                  contextText += `Company: ${resultData['company'] as string}, Volume: ${typeof resultData['projected_volume'] === 'number' ? resultData['projected_volume'].toLocaleString() : 'N/A'}`;
+                } else if (resultData['month'] && resultData['total_volume']) {
                   // Handle aggregate queries with month and volume
                   const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
                                      'July', 'August', 'September', 'October', 'November', 'December'];
-                  contextText += `Month: ${monthNames[resultData.month] || resultData.month}, Total Volume: ${resultData.total_volume.toLocaleString()}`;
+                  const monthNum = typeof resultData['month'] === 'number' ? resultData['month'] : 0;
+                  const totalVol = typeof resultData['total_volume'] === 'number' ? resultData['total_volume'] : 0;
+                  contextText += `Month: ${monthNames[monthNum] || resultData['month']}, Total Volume: ${totalVol.toLocaleString()}`;
                 } else {
                   // Generic formatting for other fields
                   const fields = Object.entries(resultData).map(([key, value]) => `${key}: ${value}`).join(', ');

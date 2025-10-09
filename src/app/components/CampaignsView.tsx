@@ -49,7 +49,8 @@ interface CampaignsViewProps {
 type SortField = 'campaign_id' | 'campaign_observation_date' | 'media_channel' | 'marketing_company' | 'industry' | 'estimated_volume' | 'estimated_spend';
 type SortDirection = 'asc' | 'desc';
 
-export default function CampaignsView({ onViewChange: _onViewChange }: CampaignsViewProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);

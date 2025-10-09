@@ -10,7 +10,8 @@ interface DashboardViewProps {
   onViewChange: (view: string) => void;
 }
 
-export default function DashboardView({ onViewChange: _onViewChange }: DashboardViewProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function DashboardView({ onViewChange }: DashboardViewProps) {
   const [chatMessage, setChatMessage] = useState('');
   const [chatHistory, setChatHistory] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -166,7 +167,12 @@ export default function DashboardView({ onViewChange: _onViewChange }: Dashboard
           },
         },
         title: {
-          show: false,
+          text: '',
+          style: {
+            fontSize: '14px',
+            fontWeight: 'bold',
+            color: '#ECECF1'
+          }
         },
         dataLabels: {
           enabled: false,
@@ -273,13 +279,13 @@ export default function DashboardView({ onViewChange: _onViewChange }: Dashboard
   );
 
   // Only create chart configurations when months data is available
-  const creditCardConfig = months.length > 0 ? createChartConfig(creditCardData, 'Credit Card') : null;
-  const creditBuilderConfig = months.length > 0 ? createChartConfig(creditBuilderData, 'Credit Builder') : null;
-  const ewaConfig = months.length > 0 ? createChartConfig(ewaData, 'EWA') : null;
-  const neobankConfig = months.length > 0 ? createChartConfig(neobankData, 'Neobank') : null;
-  const otherConfig = months.length > 0 ? createChartConfig(otherData, 'Other') : null;
-  const p2pConfig = months.length > 0 ? createChartConfig(p2pData, 'P2P') : null;
-  const traditionalConfig = months.length > 0 ? createChartConfig(traditionalData, 'Traditional') : null;
+  const creditCardConfig = months.length > 0 ? createChartConfig(creditCardData) : null;
+  const creditBuilderConfig = months.length > 0 ? createChartConfig(creditBuilderData) : null;
+  const ewaConfig = months.length > 0 ? createChartConfig(ewaData) : null;
+  const neobankConfig = months.length > 0 ? createChartConfig(neobankData) : null;
+  const otherConfig = months.length > 0 ? createChartConfig(otherData) : null;
+  const p2pConfig = months.length > 0 ? createChartConfig(p2pData) : null;
+  const traditionalConfig = months.length > 0 ? createChartConfig(traditionalData) : null;
 
   return (
     <div className="flex h-screen bg-[#202123]">
