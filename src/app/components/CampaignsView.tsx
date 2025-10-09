@@ -112,7 +112,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
   // Initial load
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+  }, [fetchCampaigns]);
 
   // Debounce search input
   useEffect(() => {
@@ -136,7 +136,7 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
     if (!loading) {
       fetchCampaigns(true); // Use refreshing state for updates
     }
-  }, [currentPage, debouncedSearchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection]);
+  }, [currentPage, debouncedSearchTerm, mediaChannelFilter, marketingCompanyFilter, sortField, sortDirection, fetchCampaigns, loading]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {

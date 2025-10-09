@@ -336,7 +336,7 @@ export default function DashboardView({ onViewChange }: DashboardViewProps) {
                 onClick={() => setChatMessage("Explain what's happening in this chart")}
                 className="w-full text-left px-3 py-2 bg-[#343541] hover:bg-[#4A4A4A] border border-[#4A4A4A] rounded-lg text-[#ECECF1] text-sm transition-colors"
               >
-                Explain what's happening in this chart
+                Explain what&apos;s happening in this chart
               </button>
               <button
                 onClick={() => setChatMessage("Examine the trend in this chart in Jan - Feb 2025")}
