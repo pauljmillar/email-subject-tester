@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
+import S3Image from './S3Image';
 
 interface Campaign {
   id: number;
@@ -13,6 +14,7 @@ interface Campaign {
   estimated_volume: number;
   estimated_spend: number;
   thumbnail_url: string;
+  image_url?: string;
   subindustry?: string;
   product_type?: string;
   brand?: string;
@@ -410,12 +412,13 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
                 {campaigns.map((campaign) => (
                   <tr key={campaign.id} className="hover:bg-[#2A2A2A] cursor-pointer" onClick={() => handleRowClick(campaign)}>
                     <td className="px-4 py-4">
-                      <Image 
-                        src={campaign.thumbnail_url?.includes('via.placeholder.com') ? "/images/default-thumbnail.jpeg" : (campaign.thumbnail_url || "/images/default-thumbnail.jpeg")} 
+                      <S3Image
+                        imageKey={campaign.image_url}
                         alt={campaign.marketing_company}
                         width={64}
                         height={40}
                         className="object-cover rounded"
+                        fallbackSrc={campaign.thumbnail_url?.includes('via.placeholder.com') ? "/images/default-thumbnail.jpeg" : (campaign.thumbnail_url || "/images/default-thumbnail.jpeg")}
                       />
                     </td>
                     <td className="px-4 py-4 text-sm text-[#ECECF1] font-mono">
@@ -497,12 +500,13 @@ export default function CampaignsView({ onViewChange }: CampaignsViewProps) {
                   <div className="bg-[#343541] rounded-lg p-4">
                     <h3 className="text-lg font-semibold text-[#ECECF1] mb-3">Campaign Image</h3>
                     <div className="flex justify-center">
-                      <Image 
-                        src={selectedCampaign.thumbnail_url?.includes('via.placeholder.com') ? "/images/default-thumbnail.jpeg" : (selectedCampaign.thumbnail_url || "/images/default-thumbnail.jpeg")} 
+                      <S3Image
+                        imageKey={selectedCampaign.image_url}
                         alt={selectedCampaign.marketing_company}
                         width={300}
                         height={200}
                         className="object-cover rounded-lg"
+                        fallbackSrc={selectedCampaign.thumbnail_url?.includes('via.placeholder.com') ? "/images/default-thumbnail.jpeg" : (selectedCampaign.thumbnail_url || "/images/default-thumbnail.jpeg")}
                       />
                     </div>
                   </div>
